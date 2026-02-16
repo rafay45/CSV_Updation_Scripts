@@ -1,8 +1,233 @@
 <?php
-// Custom shortcode for dynamic category display with card UI
+/**
+ * category_display_code.php
+ * Add this file to your WordPress plugin or paste into functions.php
+ *
+ * TWO things this file does:
+ *
+ * 1. Shortcode [dynamic_product_categories]
+ *    → Shows main category cards on any page
+ *    → Each card links to its real WooCommerce category URL
+ *
+ * 2. Hook: woocommerce_before_subcategory_list  (product_cat archive pages)
+ *    → On /product-category/vinyl/          → shows subcategory cards
+ *    → On /product-category/vinyl/privacy/  → shows sub-subcategory cards (or tags)
+ *    → On /product-category/vinyl/privacy/tools-misc/  → shows tag cards
+ *    → On above URL + ?tag=top-rail         → shows products with filters
+ *
+ * Upload location: wp-content/themes/flatsome-child/functions.php  (add_action at bottom)
+ * OR as a standalone plugin file.
+ */
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SHARED CSS
+// ═══════════════════════════════════════════════════════════════════════════════
+function dpc_styles() {
+    ?>
+    <style>
+    /* ── Main category grid (shortcode page) ── */
+    .main-categories-wrapper { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .category-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 25px;
+        margin-bottom: 40px;
+    }
+    .category-card {
+        background: #fff;
+        border: 2px solid #e5e5e5;
+        border-radius: 16px;
+        padding: 20px 20px 0;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        position: relative;
+        margin-bottom: 30px;
+        text-decoration: none;
+        display: block;
+        overflow: visible;
+    }
+    .category-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        border-color: #32703B;
+    }
+    .category-image {
+        width: 100%; height: 180px;
+        background: #fff;
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 15px; border-radius: 8px; overflow: hidden;
+    }
+    .category-image img { max-width: 90%; max-height: 90%; object-fit: contain; }
+    .category-button {
+        background: #32703B; color: white;
+        padding: 12px 20px; text-align: center;
+        font-weight: 600; font-size: 16px;
+        border: none; width: calc(100% - 40px);
+        margin: 0 20px; border-radius: 25px;
+        position: relative; display: block;
+        transform: translateY(50%);
+    }
+    .category-button span { margin-left: 8px; font-size: 18px; }
+
+    /* ── Category page wrapper ── */
+    .dpc-cat-page { max-width: 1200px; margin: 0 auto; padding: 30px 20px; }
+
+    /* ── Breadcrumb ── */
+    .dpc-breadcrumb {
+        font-size: 13px; color: #888;
+        margin-bottom: 24px;
+        display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+    }
+    .dpc-breadcrumb a { color: #32703B; text-decoration: none; font-weight: 500; }
+    .dpc-breadcrumb a:hover { text-decoration: underline; }
+    .dpc-breadcrumb span { color: #ccc; }
+
+    /* ── Page heading ── */
+    .dpc-cat-heading {
+        font-size: 28px; font-weight: 700; color: #222;
+        text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;
+    }
+
+    /* ── Category description ── */
+    .dpc-cat-desc {
+        font-size: 14px; color: #555; line-height: 1.7;
+        margin-bottom: 28px; max-width: 800px;
+    }
+
+    /* ── Subcategory / Tag card grid ── */
+    .dpc-card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 20px 20px;
+        row-gap: 50px;
+        margin-bottom: 40px;
+    }
+    .dpc-cat-card {
+        background: #fff; border: 2px solid #e5e5e5;
+        border-radius: 16px; padding: 30px 16px 40px;
+        text-align: center; text-decoration: none;
+        display: flex; flex-direction: column; align-items: center;
+        position: relative; transition: all 0.25s ease;
+        min-height: 160px; overflow: visible;
+    }
+    .dpc-cat-card:hover {
+        border-color: #32703B; transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    }
+    .dpc-cat-card .dpc-card-icon {
+        width: 90px; height: 90px;
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 10px;
+    }
+    .dpc-cat-card .dpc-card-icon img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .dpc-cat-card .dpc-card-label {
+        font-size: 14px; font-weight: 600; color: #333;
+        background: #fff; border: 1px solid #e5e5e5;
+        border-radius: 20px; padding: 8px 16px;
+        position: absolute; bottom: 0; left: 50%;
+        transform: translate(-50%, 50%);
+        white-space: nowrap; min-width: 110px;
+    }
+    .dpc-cat-card .dpc-card-count { font-size: 11px; color: #aaa; margin-top: 4px; }
+
+    /* ── Products layout ── */
+    .dpc-products-layout { display: grid; grid-template-columns: 240px 1fr; gap: 30px; }
+    @media (max-width: 768px) {
+        .dpc-products-layout { grid-template-columns: 1fr; }
+        .dpc-filters-sidebar { display: none; }
+        .dpc-card-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+    }
+    .dpc-filters-sidebar {
+        background: #f9f9f9; border: 1px solid #e5e5e5;
+        border-radius: 8px; padding: 20px;
+        align-self: start; position: sticky; top: 20px;
+    }
+    .dpc-filters-sidebar h3 {
+        font-size: 13px; font-weight: 700; text-transform: uppercase;
+        color: #333; margin: 0 0 14px; padding-bottom: 10px;
+        border-bottom: 2px solid #32703B;
+    }
+    .dpc-filter-group { margin-bottom: 16px; border-bottom: 1px solid #e0e0e0; padding-bottom: 12px; }
+    .dpc-filter-group:last-child { border-bottom: none; margin-bottom: 0; }
+    .dpc-filter-group h4 {
+        font-size: 11px; font-weight: 700; text-transform: uppercase;
+        color: #444; margin: 0 0 8px; cursor: pointer;
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .dpc-filter-group h4::after { content: '▾'; font-size: 13px; color: #888; }
+    .dpc-filter-group ul { list-style: none; margin: 0; padding: 0; }
+    .dpc-filter-group ul li { margin-bottom: 6px; }
+    .dpc-filter-group ul li label {
+        display: flex !important; align-items: center !important; gap: 7px;
+        font-size: 12px; color: #333; cursor: pointer; line-height: 1.4;
+        vertical-align: middle;
+    }
+    .dpc-filter-group ul li label input[type="checkbox"] {
+        cursor: pointer; accent-color: #32703B;
+        width: 13px; height: 13px; flex-shrink: 0;
+        margin: 0 !important; padding: 0 !important;
+        position: relative !important; top: 0 !important;
+        vertical-align: middle !important; float: none !important;
+    }
+    .dpc-filter-group ul li label .dpc-fc { margin-left: auto; color: #999; font-size: 11px; }
+
+    /* ── Products grid ── */
+    .dpc-products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; }
+    .dpc-product-card {
+        border: 1px solid #dde3ec; border-radius: 6px; background: #fff;
+        display: flex; flex-direction: column; overflow: hidden;
+        transition: box-shadow 0.2s ease;
+    }
+    .dpc-product-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+    .dpc-product-card .dpc-img-wrap {
+        display: block; background: #f5f7fa; overflow: hidden;
+        aspect-ratio: 1/1; text-decoration: none;
+    }
+    .dpc-product-card .dpc-img-wrap img {
+        width: 100%; height: 100%; object-fit: cover; display: block;
+        transition: transform 0.3s ease;
+    }
+    .dpc-product-card:hover .dpc-img-wrap img { transform: scale(1.04); }
+    .dpc-product-card .dpc-card-body {
+        padding: 10px 12px 12px; display: flex; flex-direction: column; flex-grow: 1;
+    }
+    .dpc-product-card h4 { font-size: 12px; line-height: 1.45; color: #222; margin: 0 0 8px; flex-grow: 1; }
+    .dpc-product-card h4 a { color: #222; text-decoration: none; }
+    .dpc-product-card h4 a:hover { color: #32703B; }
+    .dpc-product-card .dpc-price { font-size: 15px; font-weight: 700; color: #32703B; margin-bottom: 10px; }
+    .dpc-add-to-cart-btn {
+        display: flex; align-items: center; justify-content: center;
+        gap: 6px; width: 100%; background: #32703B; color: white;
+        border: none; padding: 9px 8px; border-radius: 4px;
+        font-size: 12px; font-weight: 600; cursor: pointer;
+        text-decoration: none; transition: background 0.2s ease; text-align: center;
+    }
+    .dpc-add-to-cart-btn:hover { background: #2a5330; color: white; }
+    .dpc-sort-bar {
+        display: flex; align-items: center; justify-content: flex-end;
+        margin-bottom: 14px; gap: 10px; font-size: 13px; color: #555;
+    }
+    .dpc-sort-bar select { padding: 5px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; cursor: pointer; }
+    .dpc-no-results { grid-column: 1/-1; text-align: center; padding: 60px 20px; color: #888; font-size: 15px; }
+
+    /* Hide theme/WooCommerce breadcrumbs on category pages */
+    .tax-product_cat .breadcrumbs,
+    .tax-product_cat .woocommerce-breadcrumb,
+    .tax-product_cat nav.woocommerce-breadcrumb,
+    .tax-product_cat .flatsome-breadcrumbs { display: none !important; }
+    </style>
+    <?php
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SHORTCODE: [dynamic_product_categories]
+// Shows main category cards — each links to its real category URL
+// ═══════════════════════════════════════════════════════════════════════════════
 add_shortcode('dynamic_product_categories', 'display_dynamic_product_categories');
 function display_dynamic_product_categories() {
     ob_start();
+
+    dpc_styles();
 
     $main_category_slugs = array('vinyl', 'ornamental', 'chain-link', 'simtek', 'modern', 'trex', 'wood', 'agriculture', 'metal-horse-fence');
 
@@ -12,389 +237,36 @@ function display_dynamic_product_categories() {
         'hide_empty' => true,
     ));
 
-    ?>
-    <style>
-    .main-categories-wrapper {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 20px;
-    }
-    .category-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 25px;
-        margin-bottom: 40px;
-    }
-    .category-card {
-        background: #fff;
-        border: 2px solid #e5e5e5;
-        border-radius: 16px;
-        padding: 20px 20px 0;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        overflow: visible;
-        position: relative;
-        margin-bottom: 30px;
-    }
-    .category-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
-        border-color: #32703B;
-    }
-    .category-image {
-        width: 100%;
-        height: 180px;
-        background: #fff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 15px;
-        border-radius: 8px;
-        overflow: hidden;
-    }
-    .category-image img {
-        max-width: 90%;
-        max-height: 90%;
-        object-fit: contain;
-    }
-    .category-button {
-        background: #32703B;
-        color: white;
-        padding: 12px 20px;
-        text-align: center;
-        font-weight: 600;
-        font-size: 16px;
-        border: none;
-        width: calc(100% - 40px);
-        margin: 0 20px;
-        border-radius: 25px;
-        position: relative;
-        display: block;
-        transform: translateY(50%);
-    }
-    .category-button span {
-        margin-left: 8px;
-        font-size: 18px;
-    }
-    #sub-categories-display {
-        margin-top: 60px;
-        padding-top: 40px;
-        border-top: 3px solid #32703B;
-    }
-    .sub-categories-header {
-        text-align: left;
-        margin-bottom: 30px;
-    }
-    .sub-categories-header h2 {
-        font-size: 28px;
-        font-weight: 700;
-        color: #333;
-        margin-bottom: 5px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-    .sub-category-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 20px;
-    }
-    .sub-category-card {
-        background: white;
-        border: 2px solid #e5e5e5;
-        border-radius: 16px;
-        padding: 40px 20px 25px;
-        text-align: center;
-        transition: all 0.3s ease;
-        text-decoration: none;
-        display: flex;
-        flex-direction: column;
-        position: relative;
-        margin-bottom: 30px;
-        overflow: visible;
-        min-height: 180px;
-    }
-    .sub-category-card:hover {
-        border-color: #32703B;
-        transform: translateY(-5px);
-        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-    }
-    .sub-category-icon {
-        width: 100px;
-        height: 100px;
-        margin: 0 auto;
-        background: #fff;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
-    .sub-category-icon img {
-        max-width: 90%;
-        max-height: 90%;
-        object-fit: contain;
-    }
-    .sub-category-name {
-        font-size: 15px;
-        font-weight: 600;
-        color: #333;
-        background: #fff;
-        padding: 10px 20px;
-        border-radius: 20px;
-        border: 1px solid #e5e5e5;
-        display: inline-block;
-        position: absolute;
-        bottom: 0;
-        left: 50%;
-        transform: translate(-50%, 50%);
-        white-space: nowrap;
-        min-width: 120px;
-        text-align: center;
-    }
-    .sub-category-count {
-        font-size: 12px;
-        color: #999;
-        margin-top: 5px;
-    }
-    .breadcrumb-nav {
-        margin-bottom: 20px;
-    }
-    .breadcrumb-nav button {
-        background: #32703B;
-        color: white;
-        padding: 8px 15px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 14px;
-    }
-    .breadcrumb-nav button:hover {
-        background: #255a2e;
-    }
-    /* ── Products layout ── */
-    .dpc-products-layout {
-        display: grid;
-        grid-template-columns: 240px 1fr;
-        gap: 30px;
-        margin-bottom: 30px;
-    }
-    @media (max-width: 768px) {
-        .dpc-products-layout { grid-template-columns: 1fr; }
-        .dpc-filters-sidebar { display: none; }
-    }
-    /* ── Filters sidebar ── */
-    .dpc-filters-sidebar {
-        background: #f9f9f9;
-        border: 1px solid #e5e5e5;
-        border-radius: 8px;
-        padding: 20px;
-        align-self: start;
-        position: sticky;
-        top: 20px;
-    }
-    .dpc-filters-sidebar h3 {
-        font-size: 14px;
-        font-weight: 700;
-        text-transform: uppercase;
-        color: #333;
-        margin: 0 0 16px 0;
-        padding-bottom: 10px;
-        border-bottom: 2px solid #32703B;
-    }
-    .dpc-filter-group {
-        margin-bottom: 18px;
-        border-bottom: 1px solid #e0e0e0;
-        padding-bottom: 14px;
-    }
-    .dpc-filter-group:last-child {
-        border-bottom: none;
-        margin-bottom: 0;
-    }
-    .dpc-filter-group h4 {
-        font-size: 12px;
-        font-weight: 700;
-        text-transform: uppercase;
-        color: #444;
-        margin: 0 0 10px 0;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    .dpc-filter-group h4::after {
-        content: '▾';
-        font-size: 14px;
-        color: #888;
-    }
-    .dpc-filter-group ul {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-    }
-    .dpc-filter-group ul li {
-        margin-bottom: 7px;
-    }
-    .dpc-filter-group ul li label {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 12px;
-        color: #333;
-        cursor: pointer;
-        line-height: 1.4;
-    }
-    .dpc-filter-group ul li label input[type="checkbox"] {
-        cursor: pointer;
-        accent-color: #32703B;
-        width: 14px;
-        height: 14px;
-        flex-shrink: 0;
-    }
-    .dpc-filter-group ul li label .dpc-count {
-        margin-left: auto;
-        color: #999;
-        font-size: 11px;
-    }
-    /* ── Products grid ── */
-    .dpc-products-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-        gap: 16px;
-    }
-    /* ── Product card (screenshot style) ── */
-    .dpc-product-card {
-        border: 1px solid #dde3ec;
-        border-radius: 6px;
-        background: #fff;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        transition: box-shadow 0.2s ease;
-    }
-    .dpc-product-card:hover {
-        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-    }
-    .dpc-product-card .dpc-img-wrap {
-        display: block;
-        background: #f5f7fa;
-        overflow: hidden;
-        aspect-ratio: 1 / 1;
-        text-decoration: none;
-    }
-    .dpc-product-card .dpc-img-wrap img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-        transition: transform 0.3s ease;
-    }
-    .dpc-product-card:hover .dpc-img-wrap img {
-        transform: scale(1.04);
-    }
-    .dpc-product-card .dpc-card-body {
-        padding: 10px 12px 12px;
-        display: flex;
-        flex-direction: column;
-        flex-grow: 1;
-    }
-    .dpc-product-card h4 {
-        font-size: 12px;
-        line-height: 1.45;
-        color: #222;
-        margin: 0 0 8px 0;
-        flex-grow: 1;
-    }
-    .dpc-product-card h4 a {
-        color: #222;
-        text-decoration: none;
-    }
-    .dpc-product-card h4 a:hover {
-        color: #32703B;
-    }
-    .dpc-product-card .dpc-price {
-        font-size: 15px;
-        font-weight: 700;
-        color: #32703B;
-        margin-bottom: 10px;
-    }
-    .dpc-product-card .dpc-img-wrap {
-        position: relative;
-    }
-    .dpc-add-to-cart-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        width: 100%;
-        background: #32703B;
-        color: white;
-        border: none;
-        padding: 9px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        text-decoration: none;
-        transition: background 0.2s ease;
-        margin-top: auto;
-        text-align: center;
-    }
-    .dpc-add-to-cart-btn:hover {
-        background: #2a5330;
-        color: white;
-    }
-    .dpc-add-to-cart-btn svg {
-        flex-shrink: 0;
-    }
-    .dpc-no-results {
-        grid-column: 1 / -1;
-        text-align: center;
-        padding: 60px 20px;
-        color: #888;
-        font-size: 15px;
-    }
-    .dpc-sort-bar {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        margin-bottom: 14px;
-        gap: 10px;
-        font-size: 13px;
-        color: #555;
-    }
-    .dpc-sort-bar select {
-        padding: 5px 10px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        font-size: 13px;
-        cursor: pointer;
-    }
-    </style>
+    $category_images = array(
+        'chain-link'        => 'https://staging2.wholesalefencing.com/wp-content/uploads/2023/05/chainlink-fence-with-vinyl-slats-150x150.png',
+        'modern'            => 'https://wholesalefencing.com/wp-content/uploads/2025/01/Privacy.webp',
+        'vinyl'             => 'https://wholesalefencing.com/wp-content/uploads/2022/10/white-2.png',
+        'simtek'            => 'https://wholesalefencing.com/wp-content/uploads/2022/10/EcoStone-6x6Panel-beige-wholesale-viinyl-fencing-1.jpg',
+        'wood'              => 'https://staging2.wholesalefencing.com/wp-content/uploads/2023/05/ashland-simulated-wood-grain-150x150.jpeg',
+        'agriculture'       => 'https://wholesalefencing.com/wp-content/uploads/2023/03/H2bb27b9f5b1940eea84dadc664bdd640u.png',
+        'trex'              => 'https://wholesalefencing.com/wp-content/uploads/2022/10/IMG_1911-scaled.jpg',
+        'ornamental'        => 'https://wholesalefencing.com/wp-content/uploads/2023/03/H2bb27b9f5b1940eea84dadc664bdd640u.png',
+        'metal-horse-fence' => 'https://wholesalefencing.com/wp-content/uploads/2023/03/H2bb27b9f5b1940eea84dadc664bdd640u.png',
+    );
 
+    // Sort by the order in $main_category_slugs
+    $ordered = array();
+    foreach ($main_category_slugs as $slug) {
+        foreach ($parent_cats as $cat) {
+            if ($cat->slug === $slug) { $ordered[] = $cat; break; }
+        }
+    }
+    ?>
     <div class="main-categories-wrapper">
         <div class="category-grid">
-            <?php
-            $category_images = array(
-                'chain-link'        => 'https://staging2.wholesalefencing.com/wp-content/uploads/2023/05/chainlink-fence-with-vinyl-slats-150x150.png',
-                'modern'            => 'https://wholesalefencing.com/wp-content/uploads/2025/01/Privacy.webp',
-                'vinyl'             => 'https://wholesalefencing.com/wp-content/uploads/2022/10/white-2.png',
-                'simtek'            => 'https://wholesalefencing.com/wp-content/uploads/2022/10/EcoStone-6x6Panel-beige-wholesale-viinyl-fencing-1.jpg',
-                'wood'              => 'https://staging2.wholesalefencing.com/wp-content/uploads/2023/05/ashland-simulated-wood-grain-150x150.jpeg',
-                'agriculture'       => 'https://wholesalefencing.com/wp-content/uploads/2023/03/H2bb27b9f5b1940eea84dadc664bdd640u.png',
-                'trex'              => 'https://wholesalefencing.com/wp-content/uploads/2022/10/IMG_1911-scaled.jpg',
-                'ornamental'        => 'https://wholesalefencing.com/wp-content/uploads/2023/03/H2bb27b9f5b1940eea84dadc664bdd640u.png',
-                'metal-horse-fence' => 'https://wholesalefencing.com/wp-content/uploads/2023/03/H2bb27b9f5b1940eea84dadc664bdd640u.png',
-            );
-
-            foreach ($parent_cats as $cat):
+            <?php foreach ($ordered as $cat):
                 $thumbnail_id = get_term_meta($cat->term_id, 'thumbnail_id', true);
                 $image_url    = $thumbnail_id ? wp_get_attachment_url($thumbnail_id) : '';
                 if (!$image_url && isset($category_images[$cat->slug])) {
                     $image_url = $category_images[$cat->slug];
                 }
             ?>
-            <div class="category-card" onclick="dpcLoadSubCategories('<?php echo esc_js($cat->slug); ?>', <?php echo $cat->term_id; ?>, '<?php echo esc_js($cat->name); ?>')">
+            <a href="<?php echo esc_url(get_term_link($cat)); ?>" class="category-card">
                 <div class="category-image">
                     <?php if ($image_url): ?>
                         <img src="<?php echo esc_url($image_url); ?>" alt="<?php echo esc_attr($cat->name); ?>">
@@ -405,532 +277,782 @@ function display_dynamic_product_categories() {
                 <div class="category-button">
                     <?php echo esc_html($cat->name); ?> <span>›</span>
                 </div>
-            </div>
+            </a>
             <?php endforeach; ?>
         </div>
-
-        <div id="sub-categories-display"></div>
     </div>
-
-    <script>
-    var dpcAjax = '<?php echo admin_url('admin-ajax.php'); ?>';
-
-    function dpcLoadSubCategories(slug, parentId, parentName) {
-        var d = document.getElementById('sub-categories-display');
-        d.innerHTML = '<div style="text-align:center;padding:40px;">Loading...</div>';
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', dpcAjax + '?action=dpc_get_sub_categories&parent_id=' + parentId + '&parent_slug=' + encodeURIComponent(slug) + '&parent_name=' + encodeURIComponent(parentName), true);
-        xhr.onload = function() { d.innerHTML = xhr.responseText; dpcScroll(); };
-        xhr.onerror = function() { d.innerHTML = '<p style="color:red;text-align:center;">Error loading. Please try again.</p>'; };
-        xhr.send();
-    }
-
-    function dpcLoadTags(subSlug, subName, parentSlug, parentName) {
-        var d = document.getElementById('sub-categories-display');
-        d.innerHTML = '<div style="text-align:center;padding:40px;">Loading tags...</div>';
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', dpcAjax + '?action=dpc_get_tags&sub_slug=' + encodeURIComponent(subSlug) + '&sub_name=' + encodeURIComponent(subName) + '&parent_slug=' + encodeURIComponent(parentSlug) + '&parent_name=' + encodeURIComponent(parentName), true);
-        xhr.onload = function() { d.innerHTML = xhr.responseText; dpcScroll(); };
-        xhr.onerror = function() { d.innerHTML = '<p style="color:red;text-align:center;">Error loading tags.</p>'; };
-        xhr.send();
-    }
-
-    function dpcLoadProducts(subSlug, subName, parentSlug, parentName, tagSlug, tagName) {
-        var d = document.getElementById('sub-categories-display');
-        d.innerHTML = '<div style="text-align:center;padding:40px;">Loading products...</div>';
-        var url = dpcAjax + '?action=dpc_get_products&sub_slug=' + encodeURIComponent(subSlug) + '&sub_name=' + encodeURIComponent(subName) + '&parent_slug=' + encodeURIComponent(parentSlug) + '&parent_name=' + encodeURIComponent(parentName);
-        if (tagSlug) {
-            url += '&tag_slug=' + encodeURIComponent(tagSlug) + '&tag_name=' + encodeURIComponent(tagName);
-        }
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', url, true);
-        xhr.onload = function() { d.innerHTML = xhr.responseText; dpcScroll(); dpcInitFilters(); };
-        xhr.onerror = function() { d.innerHTML = '<p style="color:red;text-align:center;">Error loading products.</p>'; };
-        xhr.send();
-    }
-
-    function dpcBackToCategories() {
-        document.getElementById('sub-categories-display').innerHTML = '';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function dpcScroll() {
-        setTimeout(function() {
-            document.getElementById('sub-categories-display').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
-    }
-
-    // ── Client-side attribute filtering ──────────────────────────────────────
-    function dpcInitFilters() {
-        var checkboxes = document.querySelectorAll('.dpc-filter-cb');
-        checkboxes.forEach(function(cb) {
-            cb.addEventListener('change', dpcApplyFilters);
-        });
-    }
-
-    function dpcApplyFilters() {
-        var active = {};
-        document.querySelectorAll('.dpc-filter-cb:checked').forEach(function(cb) {
-            var attr = cb.dataset.attr;
-            var val  = cb.dataset.val;
-            if (!active[attr]) active[attr] = [];
-            active[attr].push(val.toLowerCase());
-        });
-
-        var cards = document.querySelectorAll('.dpc-product-card');
-        cards.forEach(function(card) {
-            if (Object.keys(active).length === 0) {
-                card.style.display = '';
-                return;
-            }
-            var attrs = JSON.parse(card.dataset.attrs || '{}');
-            var show = true;
-            for (var attr in active) {
-                var cardVal = (attrs[attr] || '').toLowerCase();
-                var matched = active[attr].some(function(v) { return cardVal.indexOf(v) !== -1; });
-                if (!matched) { show = false; break; }
-            }
-            card.style.display = show ? '' : 'none';
-        });
-
-        var grid = document.querySelector('.dpc-products-grid');
-        if (grid) {
-            var visible = grid.querySelectorAll('.dpc-product-card:not([style*="display: none"])').length;
-            var noRes = grid.querySelector('.dpc-no-results');
-            if (noRes) noRes.style.display = visible === 0 ? '' : 'none';
-        }
-    }
-    </script>
     <?php
     return ob_get_clean();
 }
 
-// ─── AJAX: Get Sub-Categories ────────────────────────────────────────────────
-add_action('wp_ajax_dpc_get_sub_categories',        'dpc_ajax_get_sub_categories');
-add_action('wp_ajax_nopriv_dpc_get_sub_categories', 'dpc_ajax_get_sub_categories');
-function dpc_ajax_get_sub_categories() {
-    $parent_id   = isset($_GET['parent_id'])   ? intval($_GET['parent_id'])               : 0;
-    $parent_slug = isset($_GET['parent_slug']) ? sanitize_text_field($_GET['parent_slug']) : '';
-    $parent_name = isset($_GET['parent_name']) ? sanitize_text_field($_GET['parent_name']) : '';
+// ═══════════════════════════════════════════════════════════════════════════════
+// CATEGORY PAGE OVERRIDE
+// Uses template_redirect to render a fully custom page (bypasses WooCommerce entirely)
+// ═══════════════════════════════════════════════════════════════════════════════
+add_action('template_redirect', 'dpc_override_category_page');
+function dpc_override_category_page() {
+    if (!is_tax('product_cat')) return;
 
-    // ✅ FIX 1: Get ALL subcategories without hide_empty restriction
-    // hide_empty => false because products might be in nested child categories
-    $sub_cats = get_terms(array(
-        'taxonomy'   => 'product_cat',
-        'parent'     => $parent_id,
-        'hide_empty' => false,  // Changed to false to show all subcategories
-        // 'number' removed - ab saari subcategories aayengi
-    ));
+    // Hide theme breadcrumb (Flatsome)
+    add_filter('flatsome_breadcrumbs', '__return_false');
+    remove_action('flatsome_breadcrumbs', 'flatsome_breadcrumb', 10);
+    add_filter('woocommerce_breadcrumb_defaults', function($defaults) {
+        $defaults['wrap_before'] = '<nav class="dpc-hidden-bc" style="display:none">';
+        return $defaults;
+    });
 
-    echo '<div class="breadcrumb-nav"><button onclick="dpcBackToCategories()">← Back to Categories</button></div>';
-
-    if (!empty($sub_cats) && !is_wp_error($sub_cats)) {
-        echo '<div class="sub-categories-header"><h2>' . esc_html($parent_name) . ' - SUB-CATEGORIES</h2></div>';
-        echo '<div class="sub-category-grid">';
-        foreach ($sub_cats as $sub) {
-            $thumbnail_id = get_term_meta($sub->term_id, 'thumbnail_id', true);
-            $icon_url     = $thumbnail_id ? wp_get_attachment_url($thumbnail_id) : '';
-            
-            // ✅ FIX: Get accurate product count including child categories
-            $product_count = dpc_get_category_product_count($sub->term_id);
-            ?>
-            <div onclick="dpcLoadTags('<?php echo esc_js($sub->slug); ?>','<?php echo esc_js($sub->name); ?>','<?php echo esc_js($parent_slug); ?>','<?php echo esc_js($parent_name); ?>')" style="cursor:pointer;">
-                <a href="javascript:void(0);" class="sub-category-card">
-                    <div class="sub-category-icon">
-                        <?php if ($icon_url): ?>
-                            <img src="<?php echo esc_url($icon_url); ?>" alt="<?php echo esc_attr($sub->name); ?>">
-                        <?php else: ?>
-                            <span style="font-size:40px;"></span>
-                        <?php endif; ?>
-                    </div>
-                    <div class="sub-category-name"><?php echo esc_html($sub->name); ?></div>
-                    <div class="sub-category-count"><?php echo intval($product_count); ?> products</div>
-                </a>
-            </div>
-            <?php
-        }
-        echo '</div>';
-    } else {
-        echo '<div class="sub-categories-header"><h2>' . esc_html($parent_name) . ' - PRODUCTS</h2></div>';
-        dpc_render_products_with_filters(array(
-            'taxonomy' => 'product_cat',
-            'field'    => 'term_id',
-            'terms'    => $parent_id,
-        ), $parent_slug, $parent_name, '', '', null);
-    }
-    wp_die();
+    // Render full page ourselves: get_header() + our content + get_footer()
+    // This completely bypasses WooCommerce template + sidebar
+    get_header();
+    dpc_render_category_page();
+    get_footer();
+    exit;
 }
 
-// ─── AJAX: Get Tags for Sub-Category ────────────────────────────────────────
-add_action('wp_ajax_dpc_get_tags',        'dpc_ajax_get_tags');
-add_action('wp_ajax_nopriv_dpc_get_tags', 'dpc_ajax_get_tags');
-function dpc_ajax_get_tags() {
-    $sub_slug    = isset($_GET['sub_slug'])    ? sanitize_text_field($_GET['sub_slug'])    : '';
-    $sub_name    = isset($_GET['sub_name'])    ? sanitize_text_field($_GET['sub_name'])    : '';
-    $parent_slug = isset($_GET['parent_slug']) ? sanitize_text_field($_GET['parent_slug']) : '';
-    $parent_name = isset($_GET['parent_name']) ? sanitize_text_field($_GET['parent_name']) : '';
+function dpc_render_category_page() {
+    $current_cat = get_queried_object();
+    if (!$current_cat || !isset($current_cat->term_id)) return;
 
-    $parent_cat = get_term_by('slug', $parent_slug, 'product_cat');
-    $parent_id  = $parent_cat ? $parent_cat->term_id : 0;
+    $cat_id   = $current_cat->term_id;
+    $cat_name = $current_cat->name;
 
-    $sub_term = get_term_by('slug', $sub_slug, 'product_cat');
-    $sub_id   = $sub_term ? $sub_term->term_id : 0;
+    echo '<div id="primary" class="content-area" style="width:100%;max-width:100%;float:none;margin:0 auto;">';
+    echo '<main id="main" class="site-main" role="main">';
 
-    if (!$sub_id) {
-        echo '<p style="text-align:center;padding:40px;color:#888;">Sub-category not found.</p>';
-        wp_die();
+    // Child categories
+    $child_cats = get_terms(array(
+        'taxonomy'   => 'product_cat',
+        'parent'     => $cat_id,
+        'hide_empty' => true,
+        'orderby'    => 'name',
+        'order'      => 'ASC',
+    ));
+    $has_children = !empty($child_cats) && !is_wp_error($child_cats);
+
+    // Ancestors for breadcrumb
+    $ancestors = array_reverse(get_ancestors($cat_id, 'product_cat'));
+
+    dpc_styles();
+    ?>
+    <div class="dpc-cat-page">
+
+        <!-- Breadcrumb -->
+        <nav class="dpc-breadcrumb">
+            <a href="<?php echo esc_url(home_url('/')); ?>">Home</a>
+            <?php foreach ($ancestors as $anc_id):
+                $anc = get_term($anc_id, 'product_cat');
+                if (!is_wp_error($anc)):
+            ?>
+                <span>›</span>
+                <a href="<?php echo esc_url(get_term_link($anc)); ?>"><?php echo esc_html($anc->name); ?></a>
+            <?php endif; endforeach; ?>
+            <span>›</span>
+            <strong><?php echo esc_html($cat_name); ?></strong>
+        </nav>
+
+        <h1 class="dpc-cat-heading"><?php echo esc_html($cat_name); ?></h1>
+
+        <?php if ($current_cat->description): ?>
+            <div class="dpc-cat-desc"><?php echo wp_kses_post($current_cat->description); ?></div>
+        <?php endif; ?>
+
+        <?php if ($has_children): ?>
+            <!-- ── Has subcategories: show category cards ── -->
+            <div class="dpc-card-grid">
+                <?php foreach ($child_cats as $child):
+                    $thumb_id  = get_term_meta($child->term_id, 'thumbnail_id', true);
+                    $thumb_url = $thumb_id ? wp_get_attachment_url($thumb_id) : '';
+                    $count     = dpc_count_products($child->term_id);
+                ?>
+                <a href="<?php echo esc_url(get_term_link($child)); ?>" class="dpc-cat-card">
+                    <div class="dpc-card-icon">
+                        <?php if ($thumb_url): ?>
+                            <img src="<?php echo esc_url($thumb_url); ?>" alt="<?php echo esc_attr($child->name); ?>">
+                        <?php else: ?>
+                            <span style="font-size:48px;">📦</span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="dpc-card-count"><?php echo intval($count); ?> products</div>
+                    <div class="dpc-card-label"><?php echo esc_html($child->name); ?></div>
+                </a>
+                <?php endforeach; ?>
+            </div>
+
+        <?php else: ?>
+            <!-- ── No subcategories: show products directly ── -->
+            <?php dpc_render_products($cat_id); ?>
+
+        <?php endif; ?>
+
+    </div><!-- .dpc-cat-page -->
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.dpc-filter-cb').forEach(function(cb) {
+            cb.addEventListener('change', dpcApplyFilters);
+        });
+    });
+    function dpcApplyFilters() {
+        var active = {};
+        document.querySelectorAll('.dpc-filter-cb:checked').forEach(function(cb) {
+            var attr = cb.dataset.attr, val = cb.dataset.val;
+            if (!active[attr]) active[attr] = [];
+            active[attr].push(val.toLowerCase());
+        });
+        document.querySelectorAll('.dpc-product-card').forEach(function(card) {
+            if (!Object.keys(active).length) { card.style.display = ''; return; }
+            var attrs = JSON.parse(card.dataset.attrs || '{}'), show = true;
+            for (var attr in active) {
+                var cv = (attrs[attr] || '').toLowerCase();
+                if (!active[attr].some(function(v){ return cv.indexOf(v) !== -1; })) { show = false; break; }
+            }
+            card.style.display = show ? '' : 'none';
+        });
+        var grid = document.querySelector('.dpc-products-grid');
+        if (grid) {
+            var vis = grid.querySelectorAll('.dpc-product-card:not([style*="display: none"])').length;
+            var nr  = grid.querySelector('.dpc-no-results');
+            if (nr) nr.style.display = vis === 0 ? '' : 'none';
+        }
     }
-
-    // ✅ FIX: Get all child categories to include their products too
-    $category_ids = array($sub_id);
-    $child_terms = get_term_children($sub_id, 'product_cat');
-    if (!is_wp_error($child_terms) && !empty($child_terms)) {
-        $category_ids = array_merge($category_ids, $child_terms);
+    function dpcSort(val) {
+        var grid = document.getElementById('dpc-grid');
+        if (!grid) return;
+        var cards = Array.from(grid.querySelectorAll('.dpc-product-card'));
+        cards.sort(function(a, b) {
+            if (val === 'title_asc') return a.dataset.title.localeCompare(b.dataset.title);
+            if (val === 'price_asc' || val === 'price_desc') {
+                var pa = parseFloat(a.dataset.price.replace(/[^0-9.]/g,''))||0;
+                var pb = parseFloat(b.dataset.price.replace(/[^0-9.]/g,''))||0;
+                return val === 'price_asc' ? pa-pb : pb-pa;
+            }
+            return 0;
+        });
+        cards.forEach(function(c){ grid.appendChild(c); });
     }
+    </script>
+    <?php
+    echo '</main></div>'; // close #main and #primary
+}
 
-    // Collect tags from products in this sub-category AND child categories
-    $args = array(
-        'post_type'      => 'product',
-        'posts_per_page' => -1,
-        'tax_query'      => array(
-            array(
-                'taxonomy' => 'product_cat',
-                'field'    => 'term_id',
-                'terms'    => $category_ids,  // Include child categories
-            )
-        )
-    );
-    $query = new WP_Query($args);
-    $all_tags = array();
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
 
-    if ($query->have_posts()) {
-        while ($query->have_posts()) {
-            $query->the_post();
-            $tags = get_the_terms(get_the_ID(), 'product_tag');
-            if ($tags && !is_wp_error($tags)) {
-                foreach ($tags as $tag) {
-                    if (!isset($all_tags[$tag->term_id])) {
-                        $all_tags[$tag->term_id] = array(
-                            'name' => $tag->name,
-                            'slug' => $tag->slug,
-                            'count' => 0
-                        );
+function dpc_count_products($term_id) {
+    $ids      = array($term_id);
+    $children = get_term_children($term_id, 'product_cat');
+    if (!is_wp_error($children)) $ids = array_merge($ids, $children);
+    $q = new WP_Query(array(
+        'post_type' => 'product', 'posts_per_page' => -1, 'fields' => 'ids',
+        'tax_query' => array(array('taxonomy' => 'product_cat', 'field' => 'term_id', 'terms' => $ids)),
+    ));
+    return $q->found_posts;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SINGLE PRODUCT PAGE OVERRIDE
+// Applies only to products that have NO Flatsome page builder content
+// (i.e. newly imported products via CSV)
+// ═══════════════════════════════════════════════════════════════════════════════
+add_action('template_redirect', 'dpc_single_product_override');
+function dpc_single_product_override() {
+    if (!is_singular('product')) return;
+
+    global $post;
+    // If product has Flatsome page builder content, let it render normally
+    $content = $post->post_content;
+    if (strpos($content, '[ux_') !== false || strpos($content, 'flatsome-ux') !== false) return;
+
+    get_header();
+    dpc_render_single_product();
+    get_footer();
+    exit;
+}
+
+function dpc_render_single_product() {
+    global $post;
+    $product = wc_get_product($post->ID);
+    if (!$product) return;
+
+    $title       = get_the_title($post->ID);
+    $price_html  = $product->get_price_html();
+    $description = $product->get_description();
+    $short_desc  = $product->get_short_description();
+    $sku         = $product->get_sku();
+    $permalink   = get_permalink($post->ID);
+
+    // Gallery images
+    $gallery_ids    = $product->get_gallery_image_ids();
+    $main_image_id  = $product->get_image_id();
+    $all_image_ids  = $main_image_id ? array_merge([$main_image_id], $gallery_ids) : $gallery_ids;
+
+    // Attributes
+    $attributes = $product->get_attributes();
+
+    // Breadcrumb ancestors
+    $terms     = get_the_terms($post->ID, 'product_cat');
+    $cat       = null;
+    $ancestors = [];
+    if ($terms && !is_wp_error($terms)) {
+        foreach ($terms as $t) {
+            if (!$t->parent) continue;
+            $cat = $t; break;
+        }
+        if (!$cat) $cat = $terms[0];
+        $anc_ids   = array_reverse(get_ancestors($cat->term_id, 'product_cat'));
+        foreach ($anc_ids as $aid) {
+            $anc = get_term($aid, 'product_cat');
+            if (!is_wp_error($anc)) $ancestors[] = $anc;
+        }
+        $ancestors[] = $cat;
+    }
+    ?>
+    <style>
+    .dpc-sp-page { max-width: 1200px; margin: 0 auto; padding: 30px 20px; font-family: Montserrat, sans-serif; }
+    .dpc-sp-breadcrumb { font-size: 13px; color: #888; margin-bottom: 24px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .dpc-sp-breadcrumb a { color: #32703B; text-decoration: none; font-weight: 500; }
+    .dpc-sp-breadcrumb a:hover { text-decoration: underline; }
+    .dpc-sp-breadcrumb span { color: #ccc; }
+    .dpc-sp-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; align-items: start; }
+    @media (max-width: 768px) { .dpc-sp-layout { grid-template-columns: 1fr; gap: 24px; } }
+
+    /* Gallery */
+    .dpc-sp-gallery { position: sticky; top: 20px; }
+    .dpc-sp-main-img {
+        width: 100%; aspect-ratio: 1/1; background: #f5f7fa;
+        border: 1px solid #e5e5e5; border-radius: 10px; overflow: hidden;
+        display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
+    }
+    .dpc-sp-main-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .dpc-sp-thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
+    .dpc-sp-thumb {
+        width: 70px; height: 70px; border: 2px solid #e5e5e5; border-radius: 6px;
+        overflow: hidden; cursor: pointer; background: #f5f7fa;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .dpc-sp-thumb:hover, .dpc-sp-thumb.active { border-color: #32703B; }
+    .dpc-sp-thumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .dpc-sp-no-img { font-size: 80px; }
+
+    /* Info */
+    .dpc-sp-info {}
+    .dpc-sp-sku { font-size: 12px; color: #999; margin-bottom: 8px; }
+    .dpc-sp-title { font-size: 22px; font-weight: 700; color: #212121; line-height: 1.35; margin: 0 0 16px; }
+    .dpc-sp-price { font-size: 28px; font-weight: 700; color: #32703B; margin-bottom: 16px; }
+    .dpc-sp-short-desc { font-size: 14px; color: #444; line-height: 1.6; margin-bottom: 20px; }
+    .dpc-sp-atc-btn {
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        background: #244e5a; color: #fff; border: none; padding: 14px 28px;
+        border-radius: 50px; font-size: 14px; font-weight: 700; cursor: pointer;
+        text-decoration: none; width: 100%; transition: background 0.2s ease;
+        margin-bottom: 24px; letter-spacing: 0.5px; text-transform: uppercase;
+        box-sizing: border-box;
+    }
+    .dpc-sp-atc-btn:hover { background: #1a3a44; color: #fff; }
+
+    /* Description */
+    .dpc-sp-desc-heading { font-size: 14px; font-weight: 700; text-transform: uppercase; color: #244e5a; border-bottom: 2px solid #32703B; padding-bottom: 8px; margin: 0 0 14px; }
+    .dpc-sp-desc { font-size: 14px; color: #444; line-height: 1.7; }
+
+    /* Accordion */
+    .dpc-sp-accordion { margin-top: 50px; }
+    .dpc-sp-acc-item {
+        border-bottom: 1px solid #e0e0e0;
+    }
+    .dpc-sp-acc-title {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 14px 4px; cursor: pointer; user-select: none;
+        font-size: 14px; font-weight: 700; color: #333; text-transform: uppercase;
+        letter-spacing: 0.5px; background: none; border: none; width: 100%;
+        text-align: left;
+    }
+    .dpc-sp-acc-title:hover { color: #244e5a; }
+    .dpc-sp-acc-title .dpc-acc-icon {
+        font-size: 18px; color: #888; transition: transform 0.25s ease; line-height: 1;
+    }
+    .dpc-sp-acc-item.open .dpc-sp-acc-title { color: #244e5a; }
+    .dpc-sp-acc-item.open .dpc-acc-icon { transform: rotate(180deg); color: #32703B; }
+    .dpc-sp-acc-inner {
+        display: none; padding: 16px 4px 24px; font-size: 14px; color: #444; line-height: 1.7;
+    }
+    .dpc-sp-acc-inner table { width: 100%; border-collapse: collapse; }
+    .dpc-sp-acc-inner table th {
+        background: #f5f7fa; font-size: 11px; font-weight: 700; text-transform: uppercase;
+        color: #555; padding: 10px 14px; text-align: left; border-bottom: 1px solid #e5e5e5; width: 35%;
+    }
+    .dpc-sp-acc-inner table td {
+        font-size: 13px; color: #333; padding: 10px 14px; border-bottom: 1px solid #f0f0f0;
+    }
+    .dpc-sp-acc-inner table tr:last-child th,
+    .dpc-sp-acc-inner table tr:last-child td { border-bottom: none; }
+
+    /* View More Parts */
+    .dpc-vmp-wrap { margin-top: 0; padding-top: 0; }
+    .dpc-vmp-toggle {
+        display: flex; align-items: center; justify-content: space-between;
+        width: 100%; background: none; border: none; cursor: pointer;
+        font-size: 14px; font-weight: 700; color: #333; text-transform: uppercase;
+        letter-spacing: 0.5px; padding: 0 0 16px; text-align: left;
+    }
+    .dpc-vmp-toggle:hover { color: #244e5a; }
+    .dpc-vmp-icon { font-size: 18px; color: #888; transition: transform 0.25s ease; }
+    .dpc-vmp-wrap.open .dpc-vmp-toggle { color: #244e5a; }
+    .dpc-vmp-wrap.open .dpc-vmp-icon { transform: rotate(180deg); color: #32703B; }
+    .dpc-vmp-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 12px;
+        padding-bottom: 10px;
+    }
+    .dpc-vmp-card {
+        display: flex; flex-direction: column; align-items: center;
+        text-decoration: none; border: 1px solid #e5e5e5; border-radius: 10px;
+        padding: 12px 8px 10px; background: #fff; text-align: center;
+        transition: all 0.2s ease;
+    }
+    .dpc-vmp-card:hover { border-color: #32703B; box-shadow: 0 3px 10px rgba(0,0,0,0.08); transform: translateY(-2px); }
+    .dpc-vmp-img { width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; }
+    .dpc-vmp-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .dpc-vmp-label { font-size: 11px; font-weight: 600; color: #333; line-height: 1.3; }
+
+    /* Hide theme breadcrumb */
+    .single-product .breadcrumbs,
+    .single-product .woocommerce-breadcrumb,
+    .single-product nav.woocommerce-breadcrumb { display: none !important; }
+    </style>
+
+    <div id="primary" class="content-area" style="width:100%;max-width:100%;float:none;margin:0 auto;">
+    <main id="main" class="site-main" role="main">
+    <div class="dpc-sp-page">
+
+        <!-- Breadcrumb -->
+        <nav class="dpc-sp-breadcrumb">
+            <a href="<?php echo esc_url(home_url('/')); ?>">Home</a>
+            <?php foreach ($ancestors as $anc): ?>
+                <span>›</span>
+                <a href="<?php echo esc_url(get_term_link($anc)); ?>"><?php echo esc_html($anc->name); ?></a>
+            <?php endforeach; ?>
+            <span>›</span>
+            <strong><?php echo esc_html($title); ?></strong>
+        </nav>
+
+        <div class="dpc-sp-layout">
+
+            <!-- LEFT: Gallery -->
+            <div class="dpc-sp-gallery">
+                <div class="dpc-sp-main-img" id="dpc-main-img">
+                    <?php if ($all_image_ids): ?>
+                        <img id="dpc-main-img-tag" src="<?php echo esc_url(wp_get_attachment_url($all_image_ids[0])); ?>" alt="<?php echo esc_attr($title); ?>">
+                    <?php else: ?>
+                        <div class="dpc-sp-no-img">📦</div>
+                    <?php endif; ?>
+                </div>
+                <?php if (count($all_image_ids) > 1): ?>
+                <div class="dpc-sp-thumbs">
+                    <?php foreach ($all_image_ids as $i => $img_id):
+                        $img_url = wp_get_attachment_url($img_id);
+                    ?>
+                    <div class="dpc-sp-thumb <?php echo $i === 0 ? 'active' : ''; ?>" onclick="dpcSetImg('<?php echo esc_js($img_url); ?>', this)">
+                        <img src="<?php echo esc_url($img_url); ?>" alt="">
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- RIGHT: Info -->
+            <div class="dpc-sp-info">
+                <?php if ($sku): ?>
+                    <div class="dpc-sp-sku">SKU: <?php echo esc_html($sku); ?></div>
+                <?php endif; ?>
+
+                <h1 class="dpc-sp-title"><?php echo esc_html($title); ?></h1>
+
+                <div class="dpc-sp-price"><?php echo wp_kses_post($price_html); ?></div>
+
+                <?php if ($short_desc): ?>
+                    <div class="dpc-sp-short-desc"><?php echo wp_kses_post($short_desc); ?></div>
+                <?php endif; ?>
+
+                <!-- Add to Cart -->
+                <form class="cart" action="<?php echo esc_url($permalink); ?>" method="post" enctype="multipart/form-data">
+                    <div style="display:flex;align-items:stretch;gap:12px;margin-bottom:16px;">
+                        <input type="number" name="quantity" value="1" min="1"
+                               style="width:70px;height:44px;padding:0 10px;border:1px solid #ccc;border-radius:50px;font-size:15px;text-align:center;box-sizing:border-box;">
+                        <button type="submit" name="add-to-cart" value="<?php echo esc_attr($post->ID); ?>" class="dpc-sp-atc-btn" style="margin-bottom:0;flex:1;height:44px;padding:0 28px;box-sizing:border-box;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                            </svg>
+                            Add to Cart
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+
+        <!-- Tabs: Overview / Specifications / Videos / Reviews -->
+        <?php
+        // Collect tab data
+        $tab_overview = $description ?: $short_desc;
+        $tab_specs     = $attributes;  // already fetched above
+
+        // Check for video URL in product meta (_video_url) or attribute named 'video'
+        $video_url = get_post_meta($post->ID, '_video_url', true);
+        if (!$video_url) $video_url = get_post_meta($post->ID, 'video_url', true);
+        if (!$video_url) {
+            // Try attribute named "video" or "video url"
+            foreach ($attributes as $attr_slug => $attr_obj) {
+                if (strpos(strtolower($attr_slug), 'video') !== false) {
+                    if (is_object($attr_obj)) {
+                        if ($attr_obj->is_taxonomy()) {
+                            $vterms = wp_get_post_terms($post->ID, $attr_slug, ['fields' => 'names']);
+                            if (!is_wp_error($vterms) && !empty($vterms)) $video_url = $vterms[0];
+                        } else {
+                            $opts = $attr_obj->get_options();
+                            if (!empty($opts)) $video_url = $opts[0];
+                        }
                     }
-                    $all_tags[$tag->term_id]['count']++;
+                    break;
                 }
             }
         }
-        wp_reset_postdata();
-    }
 
-    // ✅ DEBUG: Log all tags found (remove this after debugging)
-    error_log('DPC Tags Debug for ' . $sub_name . ':');
-    error_log('Total products found: ' . $query->found_posts);
-    error_log('Total tags collected: ' . count($all_tags));
-    foreach ($all_tags as $t) {
-        error_log('  - ' . $t['name'] . ' (' . $t['slug'] . '): ' . $t['count'] . ' products');
-    }
+        // Build tab list (only show tabs with content)
+        $tabs = [];
+        if ($tab_overview)       $tabs[] = 'overview';
+        if (!empty($tab_specs))  $tabs[] = 'specifications';
+        if ($video_url)          $tabs[] = 'videos';
+        $tabs[] = 'reviews';  // Always show reviews tab (WooCommerce handles content)
+        ?>
 
-    // ✅ FIX 2: Show ALL tags instead of filtering by fence-style keywords
-    // Purana code sirf specific fence-style tags dikha raha tha
-    // Ab saare tags dikhengy
-    
-    ?>
-    <div class="breadcrumb-nav">
-        <button onclick="dpcLoadSubCategories('<?php echo esc_js($parent_slug); ?>', <?php echo intval($parent_id); ?>, '<?php echo esc_js($parent_name); ?>')">← Back to <?php echo esc_html($parent_name); ?></button>
-    </div>
-    <?php
+        <?php if (!empty($tabs)): ?>
+        <div class="dpc-sp-accordion">
 
-    if (empty($all_tags)) {
-        // No tags found - show products directly
-        echo '<div class="sub-categories-header"><h2>' . esc_html($parent_name) . ' / ' . esc_html($sub_name) . '</h2></div>';
-        dpc_render_products_with_filters(array(
-            'taxonomy' => 'product_cat',
-            'field'    => 'term_id',
-            'terms'    => $sub_id,
-            'include_children' => true,
-        ), $parent_slug, $parent_name, $sub_slug, $sub_name, null);
-    } else {
-        // Show ALL tags
-        echo '<div class="sub-categories-header">';
-        echo '<h2>' . esc_html($parent_name) . ' / ' . esc_html($sub_name) . ' - TAGS</h2>';
-        
-        // ✅ DEBUG: Show all tag names found
-        $tag_names = array_map(function($t) { return $t['name']; }, $all_tags);
-        echo '<p>Select a tag to filter products</p>';
-        echo '<p style="font-size:12px;color:#666;">Debug: Found ' . count($all_tags) . ' tags from ' . $query->found_posts . ' products<br>';
-        echo 'Tags: ' . implode(', ', $tag_names) . '</p>';
-        
-        echo '</div>';
-        echo '<div class="sub-category-grid">';
-        
-        // Sort tags alphabetically by name
-        usort($all_tags, function($a, $b) {
-            return strcmp($a['name'], $b['name']);
-        });
-        
-        foreach ($all_tags as $tag) {
-            ?>
-            <div onclick="dpcLoadProducts('<?php echo esc_js($sub_slug); ?>','<?php echo esc_js($sub_name); ?>','<?php echo esc_js($parent_slug); ?>','<?php echo esc_js($parent_name); ?>','<?php echo esc_js($tag['slug']); ?>','<?php echo esc_js($tag['name']); ?>')" style="cursor:pointer;">
-                <a href="javascript:void(0);" class="sub-category-card">
-                    <div class="sub-category-icon">
-                        <span style="font-size:40px;color:#32703B;"></span>
-                    </div>
-                    <div class="sub-category-name"><?php echo esc_html($tag['name']); ?></div>
-                    <div class="sub-category-count"><?php echo intval($tag['count']); ?> products</div>
-                </a>
+            <!-- Overview Accordion -->
+            <?php if (in_array('overview', $tabs)): ?>
+            <div class="dpc-sp-acc-item">
+                <button class="dpc-sp-acc-title" onclick="dpcAccToggle(this)">
+                    <span>Overview</span>
+                    <span class="dpc-acc-icon">&#8964;</span>
+                </button>
+                <div class="dpc-sp-acc-inner">
+                    <?php echo wp_kses_post($tab_overview); ?>
+                </div>
             </div>
-            <?php
-        }
-        echo '</div>';
-    }
-
-    wp_die();
-}
-
-// ─── AJAX: Get Products ──────────────────────────────────────────────────────
-add_action('wp_ajax_dpc_get_products',        'dpc_ajax_get_products');
-add_action('wp_ajax_nopriv_dpc_get_products', 'dpc_ajax_get_products');
-function dpc_ajax_get_products() {
-    $sub_slug    = isset($_GET['sub_slug'])    ? sanitize_text_field($_GET['sub_slug'])    : '';
-    $sub_name    = isset($_GET['sub_name'])    ? sanitize_text_field($_GET['sub_name'])    : '';
-    $parent_slug = isset($_GET['parent_slug']) ? sanitize_text_field($_GET['parent_slug']) : '';
-    $parent_name = isset($_GET['parent_name']) ? sanitize_text_field($_GET['parent_name']) : '';
-    $tag_slug    = isset($_GET['tag_slug'])    ? sanitize_text_field($_GET['tag_slug'])    : '';
-    $tag_name    = isset($_GET['tag_name'])    ? sanitize_text_field($_GET['tag_name'])    : '';
-
-    $parent_cat = get_term_by('slug', $parent_slug, 'product_cat');
-    $parent_id  = $parent_cat ? $parent_cat->term_id : 0;
-
-    $sub_term = get_term_by('slug', $sub_slug, 'product_cat');
-    $sub_id   = $sub_term ? $sub_term->term_id : 0;
-
-    ?>
-    <div class="breadcrumb-nav">
-        <?php if ($tag_slug): ?>
-            <button onclick="dpcLoadTags('<?php echo esc_js($sub_slug); ?>','<?php echo esc_js($sub_name); ?>','<?php echo esc_js($parent_slug); ?>','<?php echo esc_js($parent_name); ?>')">← Back to Tags</button>
-        <?php else: ?>
-            <button onclick="dpcLoadSubCategories('<?php echo esc_js($parent_slug); ?>', <?php echo intval($parent_id); ?>, '<?php echo esc_js($parent_name); ?>')">← Back to <?php echo esc_html($parent_name); ?></button>
-        <?php endif; ?>
-    </div>
-    <div class="sub-categories-header">
-        <h2>
-            <?php echo esc_html($parent_name); ?> / <?php echo esc_html($sub_name); ?>
-            <?php if ($tag_name): ?>
-                / <?php echo esc_html($tag_name); ?>
             <?php endif; ?>
-        </h2>
-    </div>
-    <?php
 
-    if (!$sub_id) {
-        echo '<p style="text-align:center;padding:40px;color:#888;">Category not found.</p>';
-        wp_die();
+            <!-- Specifications Accordion -->
+            <?php if (in_array('specifications', $tabs)): ?>
+            <div class="dpc-sp-acc-item">
+                <button class="dpc-sp-acc-title" onclick="dpcAccToggle(this)">
+                    <span>Specifications</span>
+                    <span class="dpc-acc-icon">&#8964;</span>
+                </button>
+                <div class="dpc-sp-acc-inner">
+                    <table>
+                        <?php foreach ($tab_specs as $attr_slug => $attr_obj):
+                            $label = wc_attribute_label($attr_slug);
+                            $value = '';
+                            if (is_object($attr_obj) && method_exists($attr_obj, 'is_taxonomy')) {
+                                if ($attr_obj->is_taxonomy()) {
+                                    $spec_terms = wp_get_post_terms($post->ID, $attr_slug, ['fields' => 'names']);
+                                    $value = (!is_wp_error($spec_terms) && is_array($spec_terms)) ? implode(', ', $spec_terms) : '';
+                                } else {
+                                    $opts  = $attr_obj->get_options();
+                                    $value = is_array($opts) ? implode(', ', $opts) : '';
+                                }
+                            }
+                            if (!$value) continue;
+                        ?>
+                        <tr>
+                            <th><?php echo esc_html($label); ?></th>
+                            <td><?php echo esc_html($value); ?></td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </table>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Videos Accordion -->
+            <?php if (in_array('videos', $tabs)): ?>
+            <div class="dpc-sp-acc-item">
+                <button class="dpc-sp-acc-title" onclick="dpcAccToggle(this)">
+                    <span>Videos</span>
+                    <span class="dpc-acc-icon">&#8964;</span>
+                </button>
+                <div class="dpc-sp-acc-inner">
+                    <?php
+                    $embed = '';
+                    if (preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/', $video_url, $m)) {
+                        $embed = 'https://www.youtube.com/embed/' . $m[1];
+                    } elseif (preg_match('/vimeo\.com\/(\d+)/', $video_url, $m)) {
+                        $embed = 'https://player.vimeo.com/video/' . $m[1];
+                    }
+                    if ($embed): ?>
+                        <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:8px;">
+                            <iframe src="<?php echo esc_url($embed); ?>" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen loading="lazy"></iframe>
+                        </div>
+                    <?php else: ?>
+                        <p><a href="<?php echo esc_url($video_url); ?>" target="_blank" rel="noopener"><?php echo esc_html($video_url); ?></a></p>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Reviews Accordion -->
+            <div class="dpc-sp-acc-item">
+                <button class="dpc-sp-acc-title" onclick="dpcAccToggle(this)">
+                    <span>Reviews</span>
+                    <span class="dpc-acc-icon">&#8964;</span>
+                </button>
+                <div class="dpc-sp-acc-inner">
+                    <?php
+                    if (comments_open($post->ID)) {
+                        comment_form([], $post->ID);
+                        $comments = get_comments(['post_id' => $post->ID, 'status' => 'approve', 'type' => 'review']);
+                        if ($comments) {
+                            echo '<div style="margin-top:30px;">';
+                            wp_list_comments(['type' => 'review', 'callback' => null], $comments);
+                            echo '</div>';
+                        }
+                    } else {
+                        echo '<p style="color:#888;">Reviews are closed for this product.</p>';
+                    }
+                    ?>
+                </div>
+            </div>
+
+        </div><!-- .dpc-sp-accordion -->
+        <?php endif; ?>
+
+        <?php
+        // ── View More Parts: sibling sub-categories from the same main (level-1) category ──
+        // Find the top-level (level 1) ancestor of this product's category
+        $sp_terms   = get_the_terms($post->ID, 'product_cat');
+        $sp_top_cat = null;
+        if ($sp_terms && !is_wp_error($sp_terms)) {
+            foreach ($sp_terms as $sp_t) {
+                $sp_ancs = get_ancestors($sp_t->term_id, 'product_cat');
+                if (!empty($sp_ancs)) {
+                    // deepest ancestor = top-level
+                    $sp_top_cat = get_term(end($sp_ancs), 'product_cat');
+                    break;
+                } elseif (!$sp_t->parent) {
+                    $sp_top_cat = $sp_t;
+                    break;
+                }
+            }
+        }
+
+        // Get level-2 children of that top-level category
+        $sp_siblings = [];
+        if ($sp_top_cat && !is_wp_error($sp_top_cat)) {
+            $sp_siblings = get_terms([
+                'taxonomy'   => 'product_cat',
+                'parent'     => $sp_top_cat->term_id,
+                'hide_empty' => true,
+                'orderby'    => 'name',
+                'order'      => 'ASC',
+            ]);
+        }
+
+        if (!empty($sp_siblings) && !is_wp_error($sp_siblings)):
+        ?>
+        <div class="dpc-vmp-wrap">
+            <button class="dpc-vmp-toggle" onclick="dpcVmpToggle(this)">
+                <span>View More Parts in <?php echo esc_html($sp_top_cat->name); ?></span>
+                <span class="dpc-vmp-icon">&#8964;</span>
+            </button>
+            <div class="dpc-vmp-grid" id="dpc-vmp-grid" style="display:none;">
+                <?php foreach ($sp_siblings as $sp_sib):
+                    $sib_thumb_id  = get_term_meta($sp_sib->term_id, 'thumbnail_id', true);
+                    $sib_thumb_url = $sib_thumb_id ? wp_get_attachment_url($sib_thumb_id) : '';
+                ?>
+                <a href="<?php echo esc_url(get_term_link($sp_sib)); ?>" class="dpc-vmp-card">
+                    <div class="dpc-vmp-img">
+                        <?php if ($sib_thumb_url): ?>
+                            <img src="<?php echo esc_url($sib_thumb_url); ?>" alt="<?php echo esc_attr($sp_sib->name); ?>">
+                        <?php else: ?>
+                            <span style="font-size:32px;">📦</span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="dpc-vmp-label"><?php echo esc_html($sp_sib->name); ?></div>
+                </a>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
+    </div><!-- .dpc-sp-page -->
+
+    <script>
+    function dpcSetImg(url, el) {
+        document.getElementById('dpc-main-img-tag').src = url;
+        document.querySelectorAll('.dpc-sp-thumb').forEach(function(t){ t.classList.remove('active'); });
+        el.classList.add('active');
     }
+    function dpcVmpToggle(btn) {
+        var wrap  = btn.closest('.dpc-vmp-wrap');
+        var grid  = document.getElementById('dpc-vmp-grid');
+        var isOpen = wrap.classList.contains('open');
+        if (isOpen) {
+            wrap.classList.remove('open');
+            grid.style.display = 'none';
+        } else {
+            wrap.classList.add('open');
+            grid.style.display = 'grid';
+        }
+    }
+    function dpcAccToggle(btn) {
+        var item = btn.closest('.dpc-sp-acc-item');
+        var inner = item.querySelector('.dpc-sp-acc-inner');
+        var isOpen = item.classList.contains('open');
+        if (isOpen) {
+            item.classList.remove('open');
+            inner.style.display = 'none';
+        } else {
+            item.classList.add('open');
+            inner.style.display = 'block';
+        }
+    }
+    </script>
 
-    // Build tax query
-    $tax_query = array(
-        'taxonomy' => 'product_cat',
-        'field'    => 'term_id',
-        'terms'    => $sub_id,
-        'include_children' => true,
-    );
-
-    dpc_render_products_with_filters($tax_query, $parent_slug, $parent_name, $sub_slug, $sub_name, $tag_slug);
-
-    wp_die();
+    </main></div>
+    <?php
 }
 
-// ─── Helper: Render products with filters ────────────────────────────────────
-function dpc_render_products_with_filters($tax_query_item, $parent_slug, $parent_name, $sub_slug, $sub_name, $tag_slug = null, $posts_per_page = 500) {
-    
-    $tax_query = array($tax_query_item);
-    
-    // Add tag filter if provided
-    if ($tag_slug) {
-        $tax_query['relation'] = 'AND';
-        $tax_query[] = array(
-            'taxonomy' => 'product_tag',
-            'field'    => 'slug',
-            'terms'    => $tag_slug,
-        );
-    }
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONTINUE SHOPPING URL → redirect to /products/ instead of /shop/
+// ═══════════════════════════════════════════════════════════════════════════════
+add_filter('woocommerce_continue_shopping_redirect', function() {
+    return home_url('/products/');
+});
 
-    $args = array(
+function dpc_render_products($cat_id) {
+    $query = new WP_Query(array(
         'post_type'      => 'product',
-        'posts_per_page' => $posts_per_page,
-        'tax_query'      => $tax_query,
+        'posts_per_page' => 500,
         'orderby'        => 'title',
         'order'          => 'ASC',
-    );
-    $query = new WP_Query($args);
+        'tax_query'      => array(array(
+            'taxonomy'         => 'product_cat',
+            'field'            => 'term_id',
+            'terms'            => $cat_id,
+            'include_children' => true,
+        )),
+    ));
 
-    $attr_data    = array();
-    $all_products = array();
-
+    $attr_data = array(); $all_products = array();
     if ($query->have_posts()) {
         while ($query->have_posts()) {
             $query->the_post();
-            $pid     = get_the_ID();
-            $product = wc_get_product($pid);
+            $pid = get_the_ID(); $product = wc_get_product($pid);
             if (!$product) continue;
-
             $attrs_for_card = array();
-
             foreach ($product->get_attributes() as $attr_slug => $attr_obj) {
-                $label = wc_attribute_label($attr_slug);
-                $value = '';
-
+                $label = wc_attribute_label($attr_slug); $value = '';
                 if (is_object($attr_obj) && method_exists($attr_obj, 'is_taxonomy')) {
                     if ($attr_obj->is_taxonomy()) {
                         $terms = wp_get_post_terms($pid, $attr_slug, array('fields' => 'names'));
                         $value = (!is_wp_error($terms) && is_array($terms)) ? implode(', ', $terms) : '';
                     } else {
-                        $opts  = $attr_obj->get_options();
+                        $opts = $attr_obj->get_options();
                         $value = is_array($opts) ? implode(', ', $opts) : '';
                     }
                 }
-
                 if ($value === '') continue;
-
                 $attrs_for_card[$label] = $value;
-
                 foreach (array_map('trim', explode(',', $value)) as $v) {
                     if ($v === '') continue;
                     if (!isset($attr_data[$label][$v])) $attr_data[$label][$v] = 0;
                     $attr_data[$label][$v]++;
                 }
             }
-
             $all_products[] = array(
-                'id'         => $pid,
-                'title'      => get_the_title(),
-                'permalink'  => get_permalink(),
-                'add_to_cart'=> esc_url(wc_get_cart_url() . '?add-to-cart=' . $pid),
-                'price_html' => $product->get_price_html(),
-                'thumbnail'  => get_the_post_thumbnail($pid, array(300, 300), array('style' => 'width:100%;height:100%;object-fit:cover;display:block;')),
-                'attrs'      => $attrs_for_card,
+                'id'          => $pid,
+                'title'       => get_the_title(),
+                'permalink'   => get_permalink(),
+                'add_to_cart' => esc_url(wc_get_cart_url() . '?add-to-cart=' . $pid),
+                'price_html'  => $product->get_price_html(),
+                'thumbnail'   => get_the_post_thumbnail($pid, array(300, 300)),
+                'attrs'       => $attrs_for_card,
             );
         }
         wp_reset_postdata();
     }
     ksort($attr_data);
-    foreach ($attr_data as $label => &$vals) {
-        ksort($vals);
-    }
+    foreach ($attr_data as &$vals) ksort($vals);
     unset($vals);
-
-    echo '<div class="dpc-products-layout">';
-
-    // LEFT: Filters
-    echo '<aside class="dpc-filters-sidebar">';
-    echo '<h3>Filters</h3>';
-
-    if (empty($attr_data)) {
-        echo '<p style="font-size:13px;color:#888;">No filters available.</p>';
-    } else {
-        foreach ($attr_data as $label => $values) {
-            $safe_label = esc_attr(strtolower(str_replace(' ', '_', $label)));
-            echo '<div class="dpc-filter-group">';
-            echo '<h4>' . esc_html($label) . '</h4>';
-            echo '<ul>';
-            foreach ($values as $val => $count) {
-                $cb_id = 'dpc_' . $safe_label . '_' . esc_attr(md5($val));
-                echo '<li><label for="' . $cb_id . '">';
-                echo '<input type="checkbox" id="' . $cb_id . '" class="dpc-filter-cb" data-attr="' . esc_attr($label) . '" data-val="' . esc_attr($val) . '">';
-                echo esc_html($val);
-                echo '<span class="dpc-count">(' . intval($count) . ')</span>';
-                echo '</label></li>';
-            }
-            echo '</ul>';
-            echo '</div>';
-        }
-    }
-    echo '</aside>';
-
-    // RIGHT: Products
-    echo '<div>';
-    echo '<div class="dpc-sort-bar">Sort By | <select onchange="dpcSort(this.value)"><option value="default">Best Match</option><option value="price_asc">Price: Low to High</option><option value="price_desc">Price: High to Low</option><option value="title_asc">Name: A-Z</option></select></div>';
-    echo '<div class="dpc-products-grid" id="dpc-grid">';
-
-    if (empty($all_products)) {
-        echo '<p class="dpc-no-results">No products found.</p>';
-    } else {
-        foreach ($all_products as $p) {
-            $attrs_json = esc_attr(json_encode($p['attrs']));
-            echo '<div class="dpc-product-card" data-attrs="' . $attrs_json . '" data-title="' . esc_attr($p['title']) . '" data-price="' . esc_attr(strip_tags($p['price_html'])) . '">';
-            echo '<a href="' . esc_url($p['permalink']) . '" class="dpc-img-wrap">';
-            echo $p['thumbnail'];
-            echo '</a>';
-            echo '<div class="dpc-card-body">';
-            echo '<h4><a href="' . esc_url($p['permalink']) . '">' . esc_html($p['title']) . '</a></h4>';
-            echo '<div class="dpc-price">' . wp_kses_post($p['price_html']) . '</div>';
-            echo '<a href="' . $p['add_to_cart'] . '" class="dpc-add-to-cart-btn">';
-            echo '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>';
-            echo 'Add to Cart';
-            echo '</a>';
-            echo '</div>';
-            echo '</div>';
-        }
-        echo '<p class="dpc-no-results" style="display:none;">No products match your filters.</p>';
-    }
-
-    echo '</div>';
-    echo '</div>';
-    echo '</div>';
-
     ?>
-    <script>
-    function dpcSort(val) {
-        var grid = document.getElementById('dpc-grid');
-        if (!grid) return;
-        var cards = Array.from(grid.querySelectorAll('.dpc-product-card'));
-        cards.sort(function(a, b) {
-            if (val === 'title_asc') {
-                return a.dataset.title.localeCompare(b.dataset.title);
-            }
-            if (val === 'price_asc' || val === 'price_desc') {
-                var pa = parseFloat(a.dataset.price.replace(/[^0-9.]/g, '')) || 0;
-                var pb = parseFloat(b.dataset.price.replace(/[^0-9.]/g, '')) || 0;
-                return val === 'price_asc' ? pa - pb : pb - pa;
-            }
-            return 0;
-        });
-        cards.forEach(function(c) { grid.appendChild(c); });
-    }
-    </script>
+    <div class="dpc-products-layout">
+        <aside class="dpc-filters-sidebar">
+            <h3>Filters</h3>
+            <?php if (empty($attr_data)): ?>
+                <p style="font-size:12px;color:#888;">No filters available.</p>
+            <?php else: foreach ($attr_data as $label => $values):
+                $safe = esc_attr(strtolower(str_replace(' ', '_', $label)));
+            ?>
+                <div class="dpc-filter-group">
+                    <h4><?php echo esc_html($label); ?></h4>
+                    <ul>
+                        <?php foreach ($values as $val => $cnt):
+                            $cb_id = 'dpc_' . $safe . '_' . md5($val);
+                        ?>
+                        <li><label for="<?php echo $cb_id; ?>">
+                            <input type="checkbox" id="<?php echo $cb_id; ?>" class="dpc-filter-cb"
+                                   data-attr="<?php echo esc_attr($label); ?>" data-val="<?php echo esc_attr($val); ?>">
+                            <?php echo esc_html($val); ?>
+                            <span class="dpc-fc">(<?php echo intval($cnt); ?>)</span>
+                        </label></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endforeach; endif; ?>
+        </aside>
+        <div>
+            <div class="dpc-sort-bar">
+                Sort By | <select onchange="dpcSort(this.value)">
+                    <option value="default">Best Match</option>
+                    <option value="price_asc">Price: Low to High</option>
+                    <option value="price_desc">Price: High to Low</option>
+                    <option value="title_asc">Name: A-Z</option>
+                </select>
+            </div>
+            <div class="dpc-products-grid" id="dpc-grid">
+                <?php if (empty($all_products)): ?>
+                    <p class="dpc-no-results">No products found.</p>
+                <?php else: foreach ($all_products as $p):
+                    $attrs_json = esc_attr(json_encode($p['attrs']));
+                ?>
+                    <div class="dpc-product-card"
+                         data-attrs="<?php echo $attrs_json; ?>"
+                         data-title="<?php echo esc_attr($p['title']); ?>"
+                         data-price="<?php echo esc_attr(strip_tags($p['price_html'])); ?>">
+                        <a href="<?php echo esc_url($p['permalink']); ?>" class="dpc-img-wrap">
+                            <?php echo $p['thumbnail']; ?>
+                        </a>
+                        <div class="dpc-card-body">
+                            <h4><a href="<?php echo esc_url($p['permalink']); ?>"><?php echo esc_html($p['title']); ?></a></h4>
+                            <div class="dpc-price"><?php echo wp_kses_post($p['price_html']); ?></div>
+                            <a href="<?php echo $p['add_to_cart']; ?>" class="dpc-add-to-cart-btn">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                                </svg>
+                                Add to Cart
+                            </a>
+                        </div>
+                    </div>
+                <?php endforeach;
+                echo '<p class="dpc-no-results" style="display:none;">No products match your filters.</p>';
+                endif; ?>
+            </div>
+        </div>
+    </div>
     <?php
-}
-
-// ─── Helper: Get accurate product count including child categories ──────────
-function dpc_get_category_product_count($term_id) {
-    // Get the category and all its child categories
-    $term_ids = array($term_id);
-    
-    // Get all child categories recursively
-    $child_terms = get_term_children($term_id, 'product_cat');
-    if (!is_wp_error($child_terms) && !empty($child_terms)) {
-        $term_ids = array_merge($term_ids, $child_terms);
-    }
-    
-    // Count products in this category and all children
-    $args = array(
-        'post_type'      => 'product',
-        'posts_per_page' => -1,
-        'fields'         => 'ids',
-        'tax_query'      => array(
-            array(
-                'taxonomy' => 'product_cat',
-                'field'    => 'term_id',
-                'terms'    => $term_ids,
-            )
-        )
-    );
-    
-    $products = new WP_Query($args);
-    $count = $products->found_posts;
-    wp_reset_postdata();
-    
-    return $count;
 }
 ?>
