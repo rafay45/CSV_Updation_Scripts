@@ -141,12 +141,24 @@ function dpc_styles() {
         background: #f9f9f9; border: 1px solid #e5e5e5;
         border-radius: 8px; padding: 20px;
         align-self: start; position: sticky; top: 20px;
+        max-height: calc(100vh - 40px); overflow-y: auto;
     }
     .dpc-filters-sidebar h3 {
         font-size: 13px; font-weight: 700; text-transform: uppercase;
         color: #333; margin: 0 0 14px; padding-bottom: 10px;
         border-bottom: 2px solid #32703B;
+        display: flex; align-items: center; justify-content: space-between;
+        position: relative;
     }
+    .dpc-clear-all {
+        font-size: 10px; font-weight: 600; color: #fff;
+        background: #32703B; border: none; cursor: pointer;
+        text-transform: uppercase; padding: 6px 12px;
+        border-radius: 4px; transition: all 0.2s ease;
+        display: none; line-height: 1;
+    }
+    .dpc-clear-all.show { display: block; }
+    .dpc-clear-all:hover { background: #2a5330; }
     .dpc-filter-group { margin-bottom: 16px; border-bottom: 1px solid #e0e0e0; padding-bottom: 12px; }
     .dpc-filter-group:last-child { border-bottom: none; margin-bottom: 0; }
     .dpc-filter-group h4 {
@@ -170,6 +182,7 @@ function dpc_styles() {
         vertical-align: middle !important; float: none !important;
     }
     .dpc-filter-group ul li label .dpc-fc { margin-left: auto; color: #999; font-size: 11px; }
+    .dpc-filter-group ul li.dpc-hidden { display: none !important; }
 
     /* ── Products grid ── */
     .dpc-products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; }
@@ -391,6 +404,8 @@ function dpc_render_category_page() {
         document.querySelectorAll('.dpc-filter-cb').forEach(function(cb) {
             cb.addEventListener('change', dpcApplyFilters);
         });
+        var clearBtn = document.getElementById('dpc-clear-btn');
+        if (clearBtn) clearBtn.addEventListener('click', dpcClearFilters);
     });
     function dpcApplyFilters() {
         var active = {};
@@ -399,21 +414,97 @@ function dpc_render_category_page() {
             if (!active[attr]) active[attr] = [];
             active[attr].push(val.toLowerCase());
         });
+
+        // Show/hide Clear All button
+        var clearBtn = document.getElementById('dpc-clear-btn');
+        if (clearBtn) {
+            if (Object.keys(active).length > 0) {
+                clearBtn.classList.add('show');
+            } else {
+                clearBtn.classList.remove('show');
+            }
+        }
+
+        // Filter products
+        var visibleCards = [];
         document.querySelectorAll('.dpc-product-card').forEach(function(card) {
-            if (!Object.keys(active).length) { card.style.display = ''; return; }
+            if (!Object.keys(active).length) {
+                card.style.display = '';
+                visibleCards.push(card);
+                return;
+            }
             var attrs = JSON.parse(card.dataset.attrs || '{}'), show = true;
             for (var attr in active) {
                 var cv = (attrs[attr] || '').toLowerCase();
                 if (!active[attr].some(function(v){ return cv.indexOf(v) !== -1; })) { show = false; break; }
             }
             card.style.display = show ? '' : 'none';
+            if (show) visibleCards.push(card);
         });
+
+        // Update "No results" message
         var grid = document.querySelector('.dpc-products-grid');
         if (grid) {
-            var vis = grid.querySelectorAll('.dpc-product-card:not([style*="display: none"])').length;
-            var nr  = grid.querySelector('.dpc-no-results');
-            if (nr) nr.style.display = vis === 0 ? '' : 'none';
+            var nr = grid.querySelector('.dpc-no-results');
+            if (nr) nr.style.display = visibleCards.length === 0 ? '' : 'none';
         }
+
+        // Dynamic filter update: count available options and update counts
+        var availableAttrs = {};
+        visibleCards.forEach(function(card) {
+            var attrs = JSON.parse(card.dataset.attrs || '{}');
+            for (var attr in attrs) {
+                if (!availableAttrs[attr]) availableAttrs[attr] = {};
+                var vals = attrs[attr].split(',').map(function(v){ return v.trim().toLowerCase(); });
+                vals.forEach(function(v){
+                    if (v) {
+                        if (!availableAttrs[attr][v]) availableAttrs[attr][v] = 0;
+                        availableAttrs[attr][v]++;
+                    }
+                });
+            }
+        });
+
+        document.querySelectorAll('.dpc-filter-cb').forEach(function(cb) {
+            var attr = cb.dataset.attr, val = cb.dataset.val.toLowerCase();
+            var li = cb.closest('li');
+            if (!li) return;
+
+            var countSpan = li.querySelector('.dpc-fc');
+            var count = 0;
+
+            // If this filter is checked, always show it
+            if (cb.checked) {
+                li.classList.remove('dpc-hidden');
+                if (countSpan && availableAttrs[attr] && availableAttrs[attr][val]) {
+                    countSpan.textContent = '(' + availableAttrs[attr][val] + ')';
+                }
+                return;
+            }
+
+            // If no filters active, show all with original counts (restore from data attribute)
+            if (!Object.keys(active).length) {
+                li.classList.remove('dpc-hidden');
+                if (countSpan) {
+                    var originalCount = li.dataset.originalCount;
+                    if (originalCount) countSpan.textContent = '(' + originalCount + ')';
+                }
+                return;
+            }
+
+            // Check if this option is available in currently visible products
+            if (availableAttrs[attr] && availableAttrs[attr][val]) {
+                li.classList.remove('dpc-hidden');
+                count = availableAttrs[attr][val];
+                if (countSpan) countSpan.textContent = '(' + count + ')';
+            } else {
+                li.classList.add('dpc-hidden');
+            }
+        });
+    }
+    function dpcClearFilters() {
+        document.querySelectorAll('.dpc-filter-cb:checked').forEach(function(cb){ cb.checked = false; });
+        dpcApplyFilters();
     }
     function dpcSort(val) {
         var grid = document.getElementById('dpc-grid');
@@ -990,7 +1081,10 @@ function dpc_render_products($cat_id) {
     ?>
     <div class="dpc-products-layout">
         <aside class="dpc-filters-sidebar">
-            <h3>Filters</h3>
+            <h3>
+                <span>Filters</span>
+                <button type="button" id="dpc-clear-btn" class="dpc-clear-all">Clear All</button>
+            </h3>
             <?php if (empty($attr_data)): ?>
                 <p style="font-size:12px;color:#888;">No filters available.</p>
             <?php else: foreach ($attr_data as $label => $values):
@@ -1002,7 +1096,7 @@ function dpc_render_products($cat_id) {
                         <?php foreach ($values as $val => $cnt):
                             $cb_id = 'dpc_' . $safe . '_' . md5($val);
                         ?>
-                        <li><label for="<?php echo $cb_id; ?>">
+                        <li data-original-count="<?php echo intval($cnt); ?>"><label for="<?php echo $cb_id; ?>">
                             <input type="checkbox" id="<?php echo $cb_id; ?>" class="dpc-filter-cb"
                                    data-attr="<?php echo esc_attr($label); ?>" data-val="<?php echo esc_attr($val); ?>">
                             <?php echo esc_html($val); ?>
