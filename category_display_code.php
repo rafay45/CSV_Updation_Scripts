@@ -151,14 +151,13 @@ function dpc_styles() {
         position: relative;
     }
     .dpc-clear-all {
-        font-size: 10px; font-weight: 600; color: #fff;
-        background: #32703B; border: none; cursor: pointer;
+        font-size: 10px; font-weight: 600; color: #32703B;
+        border: none; cursor: pointer;
         text-transform: uppercase; padding: 6px 12px;
         border-radius: 4px; transition: all 0.2s ease;
-        display: none; line-height: 1;
+        display: none; line-height: 1; margin-bottom: 0px;
     }
     .dpc-clear-all.show { display: block; }
-    .dpc-clear-all:hover { background: #2a5330; }
     .dpc-filter-group { margin-bottom: 16px; border-bottom: 1px solid #e0e0e0; padding-bottom: 12px; }
     .dpc-filter-group:last-child { border-bottom: none; margin-bottom: 0; }
     .dpc-filter-group h4 {
@@ -166,7 +165,6 @@ function dpc_styles() {
         color: #444; margin: 0 0 8px; cursor: pointer;
         display: flex; align-items: center; justify-content: space-between;
     }
-    .dpc-filter-group h4::after { content: '▾'; font-size: 13px; color: #888; }
     .dpc-filter-group ul { list-style: none; margin: 0; padding: 0; }
     .dpc-filter-group ul li { margin-bottom: 6px; }
     .dpc-filter-group ul li label {
@@ -382,10 +380,9 @@ function dpc_render_category_page() {
                         <?php if ($thumb_url): ?>
                             <img src="<?php echo esc_url($thumb_url); ?>" alt="<?php echo esc_attr($child->name); ?>">
                         <?php else: ?>
-                            <span style="font-size:48px;">📦</span>
+                            <span style="font-size:48px;"></span>
                         <?php endif; ?>
                     </div>
-                    <div class="dpc-card-count"><?php echo intval($count); ?> products</div>
                     <div class="dpc-card-label"><?php echo esc_html($child->name); ?></div>
                 </a>
                 <?php endforeach; ?>
@@ -736,7 +733,7 @@ function dpc_render_single_product() {
                     <?php if ($all_image_ids): ?>
                         <img id="dpc-main-img-tag" src="<?php echo esc_url(wp_get_attachment_url($all_image_ids[0])); ?>" alt="<?php echo esc_attr($title); ?>">
                     <?php else: ?>
-                        <div class="dpc-sp-no-img">📦</div>
+                        <div class="dpc-sp-no-img"></div>
                     <?php endif; ?>
                 </div>
                 <?php if (count($all_image_ids) > 1): ?>
@@ -968,7 +965,7 @@ function dpc_render_single_product() {
                         <?php if ($sib_thumb_url): ?>
                             <img src="<?php echo esc_url($sib_thumb_url); ?>" alt="<?php echo esc_attr($sp_sib->name); ?>">
                         <?php else: ?>
-                            <span style="font-size:32px;">📦</span>
+                            <span style="font-size:32px;"></span>
                         <?php endif; ?>
                     </div>
                     <div class="dpc-vmp-label"><?php echo esc_html($sp_sib->name); ?></div>
@@ -1088,6 +1085,20 @@ function dpc_render_products($cat_id) {
             <?php if (empty($attr_data)): ?>
                 <p style="font-size:12px;color:#888;">No filters available.</p>
             <?php else: foreach ($attr_data as $label => $values):
+                // Skip Bundle Quantity and Pallet Size from filters
+                $label_lower = strtolower($label);
+                if ($label_lower === 'bundle quantity' || $label_lower === 'bundle-quantity' ||
+                    $label_lower === 'pallet size' || $label_lower === 'pallet-size') continue;
+
+                // Custom sorting for Length, Height, and Width attributes (numeric ascending)
+                if ($label_lower === 'length' || $label_lower === 'height' || $label_lower === 'width') {
+                    uksort($values, function($a, $b) {
+                        $num_a = floatval(preg_replace('/[^0-9.]/', '', $a));
+                        $num_b = floatval(preg_replace('/[^0-9.]/', '', $b));
+                        return $num_a - $num_b;
+                    });
+                }
+
                 $safe = esc_attr(strtolower(str_replace(' ', '_', $label)));
             ?>
                 <div class="dpc-filter-group">
