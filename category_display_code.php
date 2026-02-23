@@ -49,7 +49,7 @@ function dpc_styles() {
     .category-card:hover {
         transform: translateY(-8px);
         box-shadow: 0 12px 24px rgba(0,0,0,0.15);
-        border-color: #32703B;
+        border-color: #327A1F;
     }
     .category-image {
         width: 100%; height: 180px;
@@ -59,7 +59,7 @@ function dpc_styles() {
     }
     .category-image img { max-width: 90%; max-height: 90%; object-fit: contain; }
     .category-button {
-        background: #32703B; color: white;
+        background: #327A1F; color: white;
         padding: 12px 20px; text-align: center;
         font-weight: 600; font-size: 16px;
         border: none; width: calc(100% - 40px);
@@ -78,7 +78,7 @@ function dpc_styles() {
         margin-bottom: 24px;
         display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
     }
-    .dpc-breadcrumb a { color: #32703B; text-decoration: none; font-weight: 500; }
+    .dpc-breadcrumb a { color: #327A1F; text-decoration: none; font-weight: 500; }
     .dpc-breadcrumb a:hover { text-decoration: underline; }
     .dpc-breadcrumb span { color: #ccc; }
 
@@ -111,7 +111,7 @@ function dpc_styles() {
         min-height: 160px; overflow: visible;
     }
     .dpc-cat-card:hover {
-        border-color: #32703B; transform: translateY(-5px);
+        border-color: #327A1F; transform: translateY(-5px);
         box-shadow: 0 8px 20px rgba(0,0,0,0.1);
     }
     .dpc-cat-card .dpc-card-icon {
@@ -146,12 +146,12 @@ function dpc_styles() {
     .dpc-filters-sidebar h3 {
         font-size: 13px; font-weight: 700; text-transform: uppercase;
         color: #333; margin: 0 0 14px; padding-bottom: 10px;
-        border-bottom: 2px solid #32703B;
+        border-bottom: 2px solid #327A1F;
         display: flex; align-items: center; justify-content: space-between;
         position: relative;
     }
     .dpc-clear-all {
-        font-size: 10px; font-weight: 600; color: #32703B;
+        font-size: 10px; font-weight: 600; color: #327A1F;
         border: none; cursor: pointer;
         text-transform: uppercase; padding: 6px 12px;
         border-radius: 4px; transition: all 0.2s ease;
@@ -173,7 +173,7 @@ function dpc_styles() {
         vertical-align: middle;
     }
     .dpc-filter-group ul li label input[type="checkbox"] {
-        cursor: pointer; accent-color: #32703B;
+        cursor: pointer; accent-color: #327A1F;
         width: 13px; height: 13px; flex-shrink: 0;
         margin: 0 !important; padding: 0 !important;
         position: relative !important; top: 0 !important;
@@ -204,11 +204,11 @@ function dpc_styles() {
     }
     .dpc-product-card h4 { font-size: 12px; line-height: 1.45; color: #222; margin: 0 0 8px; flex-grow: 1; }
     .dpc-product-card h4 a { color: #222; text-decoration: none; }
-    .dpc-product-card h4 a:hover { color: #32703B; }
-    .dpc-product-card .dpc-price { font-size: 15px; font-weight: 700; color: #32703B; margin-bottom: 10px; }
+    .dpc-product-card h4 a:hover { color: #327A1F; }
+    .dpc-product-card .dpc-price { font-size: 15px; font-weight: 700; color: #327A1F; margin-bottom: 10px; }
     .dpc-add-to-cart-btn {
         display: flex; align-items: center; justify-content: center;
-        gap: 6px; width: 100%; background: #32703B; color: white;
+        gap: 6px; width: 100%; background: #327A1F; color: white;
         border: none; padding: 9px 8px; border-radius: 4px;
         font-size: 12px; font-weight: 600; cursor: pointer;
         text-decoration: none; transition: background 0.2s ease; text-align: center;
@@ -226,6 +226,11 @@ function dpc_styles() {
     .tax-product_cat .woocommerce-breadcrumb,
     .tax-product_cat nav.woocommerce-breadcrumb,
     .tax-product_cat .flatsome-breadcrumbs { display: none !important; }
+
+    /* Hide WooCommerce default sorting dropdown */
+    .woocommerce-ordering,
+    .woocommerce .woocommerce-ordering,
+    .woocommerce-result-count { display: none !important; }
     </style>
     <?php
 }
@@ -282,7 +287,7 @@ function display_dynamic_product_categories() {
                     <?php if ($image_url): ?>
                         <img src="<?php echo esc_url($image_url); ?>" alt="<?php echo esc_attr($cat->name); ?>">
                     <?php else: ?>
-                        <div style="font-size:80px;">🏗️</div>
+                        <div style="font-size:80px;"></div>
                     <?php endif; ?>
                 </div>
                 <div class="category-button">
@@ -599,7 +604,7 @@ function dpc_render_single_product() {
     <style>
     .dpc-sp-page { max-width: 1200px; margin: 0 auto; padding: 30px 20px; font-family: Montserrat, sans-serif; }
     .dpc-sp-breadcrumb { font-size: 13px; color: #888; margin-bottom: 24px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
-    .dpc-sp-breadcrumb a { color: #32703B; text-decoration: none; font-weight: 500; }
+    .dpc-sp-breadcrumb a { color: #327A1F; text-decoration: none; font-weight: 500; }
     .dpc-sp-breadcrumb a:hover { text-decoration: underline; }
     .dpc-sp-breadcrumb span { color: #ccc; }
     .dpc-sp-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; align-items: start; }
@@ -619,7 +624,7 @@ function dpc_render_single_product() {
         overflow: hidden; cursor: pointer; background: #f5f7fa;
         display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
-    .dpc-sp-thumb:hover, .dpc-sp-thumb.active { border-color: #32703B; }
+    .dpc-sp-thumb:hover, .dpc-sp-thumb.active { border-color: #327A1F; }
     .dpc-sp-thumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
     .dpc-sp-no-img { font-size: 80px; }
 
@@ -627,7 +632,7 @@ function dpc_render_single_product() {
     .dpc-sp-info {}
     .dpc-sp-sku { font-size: 12px; color: #999; margin-bottom: 8px; }
     .dpc-sp-title { font-size: 22px; font-weight: 700; color: #212121; line-height: 1.35; margin: 0 0 16px; }
-    .dpc-sp-price { font-size: 28px; font-weight: 700; color: #32703B; margin-bottom: 16px; }
+    .dpc-sp-price { font-size: 28px; font-weight: 700; color: #327A1F; margin-bottom: 16px; }
     .dpc-sp-short-desc { font-size: 14px; color: #444; line-height: 1.6; margin-bottom: 20px; }
     .dpc-sp-atc-btn {
         display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -640,7 +645,7 @@ function dpc_render_single_product() {
     .dpc-sp-atc-btn:hover { background: #1a3a44; color: #fff; }
 
     /* Description */
-    .dpc-sp-desc-heading { font-size: 14px; font-weight: 700; text-transform: uppercase; color: #244e5a; border-bottom: 2px solid #32703B; padding-bottom: 8px; margin: 0 0 14px; }
+    .dpc-sp-desc-heading { font-size: 14px; font-weight: 700; text-transform: uppercase; color: #244e5a; border-bottom: 2px solid #327A1F; padding-bottom: 8px; margin: 0 0 14px; }
     .dpc-sp-desc { font-size: 14px; color: #444; line-height: 1.7; }
 
     /* Accordion */
@@ -660,7 +665,7 @@ function dpc_render_single_product() {
         font-size: 18px; color: #888; transition: transform 0.25s ease; line-height: 1;
     }
     .dpc-sp-acc-item.open .dpc-sp-acc-title { color: #244e5a; }
-    .dpc-sp-acc-item.open .dpc-acc-icon { transform: rotate(180deg); color: #32703B; }
+    .dpc-sp-acc-item.open .dpc-acc-icon { transform: rotate(180deg); color: #327A1F; }
     .dpc-sp-acc-inner {
         display: none; padding: 16px 4px 24px; font-size: 14px; color: #444; line-height: 1.7;
     }
@@ -686,7 +691,7 @@ function dpc_render_single_product() {
     .dpc-vmp-toggle:hover { color: #244e5a; }
     .dpc-vmp-icon { font-size: 18px; color: #888; transition: transform 0.25s ease; }
     .dpc-vmp-wrap.open .dpc-vmp-toggle { color: #244e5a; }
-    .dpc-vmp-wrap.open .dpc-vmp-icon { transform: rotate(180deg); color: #32703B; }
+    .dpc-vmp-wrap.open .dpc-vmp-icon { transform: rotate(180deg); color: #327A1F; }
     .dpc-vmp-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
@@ -699,7 +704,7 @@ function dpc_render_single_product() {
         padding: 12px 8px 10px; background: #fff; text-align: center;
         transition: all 0.2s ease;
     }
-    .dpc-vmp-card:hover { border-color: #32703B; box-shadow: 0 3px 10px rgba(0,0,0,0.08); transform: translateY(-2px); }
+    .dpc-vmp-card:hover { border-color: #327A1F; box-shadow: 0 3px 10px rgba(0,0,0,0.08); transform: translateY(-2px); }
     .dpc-vmp-img { width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; }
     .dpc-vmp-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
     .dpc-vmp-label { font-size: 11px; font-weight: 600; color: #333; line-height: 1.3; }
@@ -843,6 +848,11 @@ function dpc_render_single_product() {
                     <table>
                         <?php foreach ($tab_specs as $attr_slug => $attr_obj):
                             $label = wc_attribute_label($attr_slug);
+                            $label_lower = strtolower($label);
+
+                            // Skip Brand and Post Size from specifications
+                            if ($label_lower === 'brand' || $label_lower === 'post size' || $label_lower === 'post-size') continue;
+
                             $value = '';
                             if (is_object($attr_obj) && method_exists($attr_obj, 'is_taxonomy')) {
                                 if ($attr_obj->is_taxonomy()) {
@@ -1072,7 +1082,34 @@ function dpc_render_products($cat_id) {
         }
         wp_reset_postdata();
     }
-    ksort($attr_data);
+    // Custom order for filters - specific attributes first, then rest alphabetically
+    $priority_order = array(
+        'product part'        => 1,
+        'product-part'        => 1,
+        'color'               => 2,
+        'height'              => 3,
+        'width'               => 4,
+        'product diameter'    => 5,
+        'product-diameter'    => 5,
+        'length'              => 6,
+        'product thickness'   => 7,
+        'product-thickness'   => 7,
+        'finish style'        => 8,
+        'finish-style'        => 8,
+    );
+
+    uksort($attr_data, function($a, $b) use ($priority_order) {
+        $a_lower = strtolower($a);
+        $b_lower = strtolower($b);
+        $a_priority = isset($priority_order[$a_lower]) ? $priority_order[$a_lower] : 999;
+        $b_priority = isset($priority_order[$b_lower]) ? $priority_order[$b_lower] : 999;
+
+        if ($a_priority !== $b_priority) {
+            return $a_priority - $b_priority;
+        }
+        return strcmp($a, $b); // Alphabetical for rest
+    });
+
     foreach ($attr_data as &$vals) ksort($vals);
     unset($vals);
     ?>
@@ -1085,17 +1122,36 @@ function dpc_render_products($cat_id) {
             <?php if (empty($attr_data)): ?>
                 <p style="font-size:12px;color:#888;">No filters available.</p>
             <?php else: foreach ($attr_data as $label => $values):
-                // Skip Bundle Quantity and Pallet Size from filters
+                // Skip Bundle Quantity, Pallet Size, Brand, and Post Size from filters
                 $label_lower = strtolower($label);
                 if ($label_lower === 'bundle quantity' || $label_lower === 'bundle-quantity' ||
-                    $label_lower === 'pallet size' || $label_lower === 'pallet-size') continue;
+                    $label_lower === 'pallet size' || $label_lower === 'pallet-size' ||
+                    $label_lower === 'brand' || $label_lower === 'post size' || $label_lower === 'post-size') continue;
 
-                // Custom sorting for Length, Height, and Width attributes (numeric ascending)
-                if ($label_lower === 'length' || $label_lower === 'height' || $label_lower === 'width') {
+                // Custom sorting for Length, Height, Width, Compatible Frame Size attributes (numeric ascending)
+                if ($label_lower === 'length' || $label_lower === 'height' || $label_lower === 'width' || $label_lower === 'compatible frame size') {
                     uksort($values, function($a, $b) {
                         $num_a = floatval(preg_replace('/[^0-9.]/', '', $a));
                         $num_b = floatval(preg_replace('/[^0-9.]/', '', $b));
                         return $num_a - $num_b;
+                    });
+                }
+
+                // Custom sorting for Product Size (WIDTHxLENGTH format) - sort by width first, then length
+                if ($label_lower === 'product size') {
+                    uksort($values, function($a, $b) {
+                        // Extract all numbers from the value
+                        preg_match_all('/[\d.]+/', $a, $matches_a);
+                        preg_match_all('/[\d.]+/', $b, $matches_b);
+
+                        $w_a = isset($matches_a[0][0]) ? floatval($matches_a[0][0]) : 0;
+                        $l_a = isset($matches_a[0][1]) ? floatval($matches_a[0][1]) : 0;
+                        $w_b = isset($matches_b[0][0]) ? floatval($matches_b[0][0]) : 0;
+                        $l_b = isset($matches_b[0][1]) ? floatval($matches_b[0][1]) : 0;
+
+                        // Sort by width first, then by length
+                        if ($w_a !== $w_b) return $w_a - $w_b;
+                        return $l_a - $l_b;
                     });
                 }
 
