@@ -70,7 +70,7 @@ function dpc_styles() {
     .category-button span { margin-left: 8px; font-size: 18px; }
 
     /* ── Category page wrapper ── */
-    .dpc-cat-page { max-width: 1200px; margin: 0 auto; padding: 30px 20px; }
+    .dpc-cat-page { max-width: 1200px; margin: 0 auto; padding: 0px 20px; }
 
     /* ── Breadcrumb ── */
     .dpc-breadcrumb {
@@ -92,6 +92,13 @@ function dpc_styles() {
     .dpc-cat-desc {
         font-size: 14px; color: #555; line-height: 1.7;
         margin-bottom: 28px; max-width: 800px;
+    }
+    /* Hide any products/filters that might appear in category description */
+    .dpc-cat-desc .dpc-product-card,
+    .dpc-cat-desc .dpc-sort-filter-btn-wrapper,
+    .dpc-cat-desc .dpc-products-layout,
+    .dpc-cat-desc .dpc-products-grid {
+        display: none !important;
     }
 
     /* ── Subcategory / Tag card grid ── */
@@ -132,55 +139,380 @@ function dpc_styles() {
 
     /* ── Products layout ── */
     .dpc-products-layout { display: grid; grid-template-columns: 240px 1fr; gap: 30px; }
-    @media (max-width: 768px) {
-        .dpc-products-layout { grid-template-columns: 1fr; }
-        .dpc-filters-sidebar { display: none; }
-        .dpc-card-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
-    }
+
+    /* Desktop Left Sidebar */
     .dpc-filters-sidebar {
-        background: #f9f9f9; border: 1px solid #e5e5e5;
-        border-radius: 8px; padding: 20px;
-        align-self: start; position: sticky; top: 20px;
-        max-height: calc(100vh - 40px); overflow-y: auto;
+        background: #f9f9f9;
+        border: 1px solid #e5e5e5;
+        border-radius: 8px;
+        padding: 20px;
+        align-self: start;
+        position: sticky;
+        top: 20px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
     }
     .dpc-filters-sidebar h3 {
-        font-size: 13px; font-weight: 700; text-transform: uppercase;
-        color: #333; margin: 0 0 14px; padding-bottom: 10px;
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #333;
+        margin: 0 0 14px;
+        padding-bottom: 10px;
         border-bottom: 2px solid #327A1F;
-        display: flex; align-items: center; justify-content: space-between;
-        position: relative;
+    }
+    .dpc-filter-header-desktop {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #327A1F;
+    }
+    .dpc-filter-header-desktop h3 {
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #333;
+        margin: 0;
+        padding: 0;
+        border: none;
     }
     .dpc-clear-all {
-        font-size: 10px; font-weight: 600; color: #327A1F;
-        border: none; cursor: pointer;
-        text-transform: uppercase; padding: 6px 12px;
-        border-radius: 4px; transition: all 0.2s ease;
-        display: none; line-height: 1; margin-bottom: 0px;
+        font-size: 10px;
+        margin-bottom: 0px;
+        font-weight: 600;
+        color: #327A1F;
+        background: none;
+        border: none;
+        cursor: pointer;
+        text-transform: uppercase;
+        padding: 6px 12px;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        display: none;
+        white-space: nowrap;
     }
-    .dpc-clear-all.show { display: block; }
-    .dpc-filter-group { margin-bottom: 16px; border-bottom: 1px solid #e0e0e0; padding-bottom: 12px; }
-    .dpc-filter-group:last-child { border-bottom: none; margin-bottom: 0; }
+    .dpc-clear-all.show {
+        display: block;
+    }
+    .dpc-clear-all:hover {
+        background: #f0f0f0;
+    }
+    .dpc-filter-group {
+        margin-bottom: 16px;
+        border-bottom: 1px solid #e0e0e0;
+        padding-bottom: 12px;
+    }
+    .dpc-filter-group:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
     .dpc-filter-group h4 {
-        font-size: 11px; font-weight: 700; text-transform: uppercase;
-        color: #444; margin: 0 0 8px; cursor: pointer;
-        display: flex; align-items: center; justify-content: space-between;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #444;
+        margin: 0 0 8px;
     }
-    .dpc-filter-group ul { list-style: none; margin: 0; padding: 0; }
-    .dpc-filter-group ul li { margin-bottom: 6px; }
+    .dpc-filter-group ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    .dpc-filter-group ul li {
+        margin-bottom: 6px;
+    }
     .dpc-filter-group ul li label {
-        display: flex !important; align-items: center !important; gap: 7px;
-        font-size: 12px; color: #333; cursor: pointer; line-height: 1.4;
-        vertical-align: middle;
+        display: flex !important;
+        align-items: center !important;
+        gap: 7px;
+        font-size: 12px;
+        color: #333;
+        cursor: pointer;
+        line-height: 1.4;
     }
     .dpc-filter-group ul li label input[type="checkbox"] {
-        cursor: pointer; accent-color: #327A1F;
-        width: 13px; height: 13px; flex-shrink: 0;
-        margin: 0 !important; padding: 0 !important;
-        position: relative !important; top: 0 !important;
-        vertical-align: middle !important; float: none !important;
+        cursor: pointer;
+        accent-color: #327A1F;
+        width: 13px;
+        height: 13px;
+        flex-shrink: 0;
+        margin: 0 !important;
+        padding: 0 !important;
     }
-    .dpc-filter-group ul li label .dpc-fc { margin-left: auto; color: #999; font-size: 11px; }
-    .dpc-filter-group ul li.dpc-hidden { display: none !important; }
+    .dpc-filter-group ul li label .dpc-fc {
+        margin-left: auto;
+        color: #999;
+        font-size: 11px;
+    }
+    .dpc-filter-group ul li.dpc-hidden {
+        display: none !important;
+    }
+
+    /* Sort & Filter Button (Mobile Only) */
+    .dpc-sort-filter-btn-wrapper {
+        display: none;
+    }
+    .dpc-sort-filter-btn-wrapper::after {
+        content: "";
+        display: table;
+        clear: both;
+    }
+    .dpc-sort-filter-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #fff;
+        border: 1px solid #ddd;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #333;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        float: right;
+    }
+    .dpc-sort-filter-btn:hover {
+        background: #f5f5f5;
+        border-color: #327A1F;
+    }
+    .dpc-sort-filter-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    /* Filter Drawer (Mobile Only - Right Side) */
+    .dpc-filter-drawer {
+        display: none;
+    }
+
+
+    /* Filter Drawer Overlay */
+    .dpc-filter-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 9998;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .dpc-filter-overlay.show {
+        display: block;
+        opacity: 1;
+    }
+
+    @media (max-width: 768px) {
+        .dpc-card-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+
+        /* Hide desktop sidebar and sort bar on mobile */
+        .dpc-products-layout { grid-template-columns: 1fr; }
+        .dpc-filters-sidebar { display: none !important; }
+        .dpc-sort-bar { display: none !important; }
+
+        /* Show Sort & Filter button on mobile */
+        .dpc-sort-filter-btn-wrapper {
+            display: block;
+            max-width: 1200px;
+            padding: 0 20px;
+            text-align: right;
+        }
+
+        /* Show and configure filter drawer on mobile */
+        .dpc-filter-drawer {
+            display: block;
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 85%;
+            max-width: 320px;
+            height: 100%;
+            background: white;
+            z-index: 9999;
+            overflow-y: auto;
+            padding: 0;
+            transition: right 0.3s ease;
+            box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+        }
+        .dpc-filter-drawer.open {
+            right: 0;
+        }
+
+        /* Drawer Header */
+        .dpc-filter-drawer-header {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            border-bottom: 1px solid #e5e5e5;
+            background: #fff;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .dpc-close-drawer {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #666;
+            padding: 8px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+        .dpc-close-drawer:hover {
+            background: #f5f5f5;
+            color: #333;
+        }
+        .dpc-close-drawer svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Sort Section in Drawer */
+        .dpc-sort-section {
+            padding: 20px 24px;
+            background: #fff;
+        }
+        .dpc-sort-section h4 {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #444;
+            margin: 0 0 10px;
+        }
+        .dpc-sort-section select {
+            width: 100%;
+            padding: 10px 32px 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            background: white;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+        }
+
+        /* Filters Section in Drawer */
+        .dpc-filters-section {
+            padding: 20px 24px;
+        }
+        .dpc-filter-header-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .dpc-filter-header-inner h4 {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #444;
+            margin: 0;
+        }
+        .dpc-clear-filters {
+            font-size: 11px;
+            font-weight: 600;
+            color: #327A1F;
+            background: none;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            padding: 6px 12px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* Filter Groups (Accordion Style for Mobile) */
+        .dpc-filter-group-accordion {
+            border-bottom: 1px solid #e5e5e5;
+        }
+        .dpc-filter-group-accordion:last-child {
+            border-bottom: none;
+        }
+        .dpc-filter-group-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            background: none;
+            border: none;
+            padding: 14px 0;
+            cursor: pointer;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+        }
+        .dpc-filter-group-title .dpc-accordion-icon {
+            width: 16px;
+            height: 16px;
+            color: #888;
+            transition: transform 0.25s ease;
+            flex-shrink: 0;
+        }
+        .dpc-filter-group-accordion.open .dpc-filter-group-title .dpc-accordion-icon {
+            transform: rotate(180deg);
+            color: #327A1F;
+        }
+        .dpc-filter-group-title svg {
+            width: 16px;
+            height: 16px;
+        }
+        .dpc-filter-group-content {
+            display: none;
+            padding: 0 0 16px;
+        }
+        .dpc-filter-group-accordion.open .dpc-filter-group-content {
+            display: block;
+        }
+        .dpc-filter-group-content ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        .dpc-filter-group-content ul li {
+            margin-bottom: 8px;
+        }
+        .dpc-filter-group-content ul li label {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px;
+            font-size: 13px;
+            color: #333;
+            cursor: pointer;
+            line-height: 1.4;
+        }
+        .dpc-filter-group-content ul li label input[type="checkbox"] {
+            cursor: pointer;
+            accent-color: #327A1F;
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        .dpc-filter-group-content ul li label .dpc-fc {
+            margin-left: auto;
+            color: #999;
+            font-size: 12px;
+        }
+        .dpc-filter-group-content ul li.dpc-hidden {
+            display: none !important;
+        }
+    }
 
     /* ── Products grid ── */
     .dpc-products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; }
@@ -214,12 +546,25 @@ function dpc_styles() {
         text-decoration: none; transition: background 0.2s ease; text-align: center;
     }
     .dpc-add-to-cart-btn:hover { background: #2a5330; color: white; }
-    .dpc-sort-bar {
-        display: flex; align-items: center; justify-content: flex-end;
-        margin-bottom: 14px; gap: 10px; font-size: 13px; color: #555;
-    }
-    .dpc-sort-bar select { padding: 5px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; cursor: pointer; }
     .dpc-no-results { grid-column: 1/-1; text-align: center; padding: 60px 20px; color: #888; font-size: 15px; }
+
+    /* Desktop Sort Bar */
+    .dpc-sort-bar {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        margin-bottom: 14px;
+        gap: 10px;
+        font-size: 13px;
+        color: #555;
+    }
+    .dpc-sort-bar select {
+        padding: 5px 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 13px;
+        cursor: pointer;
+    }
 
     /* Hide theme/WooCommerce breadcrumbs on category pages */
     .tax-product_cat .breadcrumbs,
@@ -227,10 +572,18 @@ function dpc_styles() {
     .tax-product_cat nav.woocommerce-breadcrumb,
     .tax-product_cat .flatsome-breadcrumbs { display: none !important; }
 
-    /* Hide WooCommerce default sorting dropdown */
+    /* Hide WooCommerce default sorting dropdown and filter buttons */
     .woocommerce-ordering,
     .woocommerce .woocommerce-ordering,
-    .woocommerce-result-count { display: none !important; }
+    .woocommerce-result-count,
+    .tax-product_cat .shop-page-title .woocommerce-ordering,
+    .tax-product_cat .filter-button,
+    .tax-product_cat button.filter-button { display: none !important; }
+
+    /* Hide GET QUOTE button from top header on category pages (not from mobile left menu) */
+    .tax-product_cat .header-wrapper .header-button:not(.off-canvas .header-button),
+    .tax-product_cat .header-top .header-button,
+    .tax-product_cat .top-bar-nav .header-button { display: none !important; }
     </style>
     <?php
 }
@@ -507,6 +860,35 @@ function dpc_render_category_page() {
     function dpcClearFilters() {
         document.querySelectorAll('.dpc-filter-cb:checked').forEach(function(cb){ cb.checked = false; });
         dpcApplyFilters();
+    }
+    function dpcToggleFilterDrawer() {
+        var drawer = document.getElementById('dpc-filter-drawer');
+        var overlay = document.getElementById('dpc-filter-overlay');
+
+        if (drawer && overlay) {
+            var isOpen = drawer.classList.contains('open');
+
+            if (isOpen) {
+                // Close drawer
+                drawer.classList.remove('open');
+                overlay.classList.remove('show');
+                document.body.style.overflow = '';
+            } else {
+                // Open drawer
+                drawer.classList.add('open');
+                overlay.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+    }
+    function dpcToggleAccordion(btn) {
+        var accordion = btn.closest('.dpc-filter-group-accordion');
+        if (accordion) {
+            accordion.classList.toggle('open');
+        }
+    }
+    function dpcHandleSort(val) {
+        dpcSort(val);
     }
     function dpcSort(val) {
         var grid = document.getElementById('dpc-grid');
@@ -1113,12 +1495,45 @@ function dpc_render_products($cat_id) {
     foreach ($attr_data as &$vals) ksort($vals);
     unset($vals);
     ?>
-    <div class="dpc-products-layout">
-        <aside class="dpc-filters-sidebar">
-            <h3>
-                <span>Filters</span>
-                <button type="button" id="dpc-clear-btn" class="dpc-clear-all">Clear All</button>
-            </h3>
+    <!-- Sort & Filter Button (Mobile Only) -->
+    <div class="dpc-sort-filter-btn-wrapper">
+        <button class="dpc-sort-filter-btn" onclick="dpcToggleFilterDrawer()">
+            <span>Sort & Filter</span>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M0 3h7v2H0V3zm0 4h5v2H0V7zm0 4h8v2H0v-2zm10-8h6v2h-6V3zm0 8h6v2h-6v-2zm-2-4h8v2H8V7z"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Mobile Filter Drawer (Right Side) -->
+    <aside id="dpc-filter-drawer" class="dpc-filter-drawer">
+        <div class="dpc-filter-drawer-header">
+            <button class="dpc-close-drawer" onclick="dpcToggleFilterDrawer()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Sort By Section -->
+        <div class="dpc-sort-section">
+            <h4>Sort By</h4>
+            <select id="dpc-sort-select-mobile" onchange="dpcSort(this.value)">
+                <option value="default">Best Match</option>
+                <option value="price_asc">Price: Low to High</option>
+                <option value="price_desc">Price: High to Low</option>
+                <option value="title_asc">Name: A-Z</option>
+            </select>
+        </div>
+
+        <!-- Filters Section (Mobile - Accordion Style) -->
+        <div class="dpc-filters-section">
+            <div class="dpc-filter-header-inner">
+                <h4>Filter</h4>
+                <button type="button" class="dpc-clear-filters" onclick="dpcClearFilters()">Clear All</button>
+            </div>
+
             <?php if (empty($attr_data)): ?>
                 <p style="font-size:12px;color:#888;">No filters available.</p>
             <?php else: foreach ($attr_data as $label => $values):
@@ -1127,6 +1542,9 @@ function dpc_render_products($cat_id) {
                 if ($label_lower === 'bundle quantity' || $label_lower === 'bundle-quantity' ||
                     $label_lower === 'pallet size' || $label_lower === 'pallet-size' ||
                     $label_lower === 'brand' || $label_lower === 'post size' || $label_lower === 'post-size') continue;
+
+                // Hide filter groups with no values
+                if (empty($values)) continue;
 
                 // Custom sorting for Length, Height, Width, Compatible Frame Size attributes (numeric ascending)
                 if ($label_lower === 'length' || $label_lower === 'height' || $label_lower === 'width' || $label_lower === 'compatible frame size') {
@@ -1157,23 +1575,81 @@ function dpc_render_products($cat_id) {
 
                 $safe = esc_attr(strtolower(str_replace(' ', '_', $label)));
             ?>
+                <div class="dpc-filter-group-accordion">
+                    <button class="dpc-filter-group-title" onclick="dpcToggleAccordion(this)">
+                        <span><?php echo esc_html($label); ?></span>
+                        <svg class="dpc-accordion-icon" viewBox="0 0 12 12" fill="currentColor">
+                            <path d="M6 9L1 4h10z"/>
+                        </svg>
+                    </button>
+                    <div class="dpc-filter-group-content">
+                        <ul>
+                            <?php foreach ($values as $val => $cnt):
+                                $cb_id = 'dpc_mobile_' . $safe . '_' . md5($val);
+                            ?>
+                            <li data-original-count="<?php echo intval($cnt); ?>">
+                                <label for="<?php echo $cb_id; ?>">
+                                    <input type="checkbox" id="<?php echo $cb_id; ?>" class="dpc-filter-cb"
+                                           data-attr="<?php echo esc_attr($label); ?>" data-val="<?php echo esc_attr($val); ?>">
+                                    <?php echo esc_html($val); ?>
+                                    <span class="dpc-fc">(<?php echo intval($cnt); ?>)</span>
+                                </label>
+                            </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                </div>
+            <?php endforeach; endif; ?>
+        </div>
+    </aside>
+
+    <!-- Filter Drawer Overlay -->
+    <div class="dpc-filter-overlay" id="dpc-filter-overlay" onclick="dpcToggleFilterDrawer()"></div>
+
+    <div class="dpc-products-layout">
+        <!-- Desktop Left Sidebar -->
+        <aside class="dpc-filters-sidebar" id="dpc-filters-sidebar">
+            <div class="dpc-filter-header-desktop">
+                <h3>Filters</h3>
+                <button type="button" id="dpc-clear-btn" class="dpc-clear-all" onclick="dpcClearFilters()">Clear All</button>
+            </div>
+            <?php if (empty($attr_data)): ?>
+                <p style="font-size:12px;color:#888;">No filters available.</p>
+            <?php else:
+                // Reset the array pointer for second iteration
+                reset($attr_data);
+                foreach ($attr_data as $label => $values):
+                    // Skip Bundle Quantity, Pallet Size, Brand, and Post Size from filters
+                    $label_lower = strtolower($label);
+                    if ($label_lower === 'bundle quantity' || $label_lower === 'bundle-quantity' ||
+                        $label_lower === 'pallet size' || $label_lower === 'pallet-size' ||
+                        $label_lower === 'brand' || $label_lower === 'post size' || $label_lower === 'post-size') continue;
+
+                    // Hide filter groups with no values
+                    if (empty($values)) continue;
+
+                    $safe = esc_attr(strtolower(str_replace(' ', '_', $label)));
+            ?>
                 <div class="dpc-filter-group">
                     <h4><?php echo esc_html($label); ?></h4>
                     <ul>
                         <?php foreach ($values as $val => $cnt):
-                            $cb_id = 'dpc_' . $safe . '_' . md5($val);
+                            $cb_id = 'dpc_desktop_' . $safe . '_' . md5($val);
                         ?>
-                        <li data-original-count="<?php echo intval($cnt); ?>"><label for="<?php echo $cb_id; ?>">
-                            <input type="checkbox" id="<?php echo $cb_id; ?>" class="dpc-filter-cb"
-                                   data-attr="<?php echo esc_attr($label); ?>" data-val="<?php echo esc_attr($val); ?>">
-                            <?php echo esc_html($val); ?>
-                            <span class="dpc-fc">(<?php echo intval($cnt); ?>)</span>
-                        </label></li>
+                        <li data-original-count="<?php echo intval($cnt); ?>">
+                            <label for="<?php echo $cb_id; ?>">
+                                <input type="checkbox" id="<?php echo $cb_id; ?>" class="dpc-filter-cb"
+                                       data-attr="<?php echo esc_attr($label); ?>" data-val="<?php echo esc_attr($val); ?>">
+                                <?php echo esc_html($val); ?>
+                                <span class="dpc-fc">(<?php echo intval($cnt); ?>)</span>
+                            </label>
+                        </li>
                         <?php endforeach; ?>
                     </ul>
                 </div>
             <?php endforeach; endif; ?>
         </aside>
+
         <div>
             <div class="dpc-sort-bar">
                 Sort By | <select onchange="dpcSort(this.value)">
