@@ -111,7 +111,7 @@ function dpc_styles() {
     }
     .dpc-cat-card {
         background: #fff; border: 2px solid #e5e5e5;
-        border-radius: 16px; padding: 30px 16px 40px;
+        border-radius: 16px; padding: 30px 20px 40px;
         text-align: center; text-decoration: none;
         display: flex; flex-direction: column; align-items: center;
         position: relative; transition: all 0.25s ease;
@@ -128,12 +128,40 @@ function dpc_styles() {
     }
     .dpc-cat-card .dpc-card-icon img { max-width: 100%; max-height: 100%; object-fit: contain; }
     .dpc-cat-card .dpc-card-label {
-        font-size: 14px; font-weight: 600; color: #333;
+        font-size: 13px; font-weight: 600; color: #333;
         background: #fff; border: 1px solid #e5e5e5;
-        border-radius: 20px; padding: 8px 16px;
+        border-radius: 20px; padding: 8px 14px;
         position: absolute; bottom: 0; left: 50%;
         transform: translate(-50%, 50%);
-        white-space: nowrap; min-width: 110px;
+        min-width: 120px;
+        max-width: 95%;
+        text-align: center;
+        line-height: 1.35;
+        white-space: nowrap;
+    }
+    .dpc-cat-card .dpc-card-label.multi-word {
+        white-space: normal;
+        max-height: 2.7em;
+        overflow-y: auto;
+        overflow-x: hidden;
+        display: block;
+    }
+    .dpc-cat-card .dpc-card-label.multi-word::-webkit-scrollbar {
+        width: 4px;
+    }
+    .dpc-cat-card .dpc-card-label.multi-word::-webkit-scrollbar-thumb {
+        background: transparent;
+    }
+    .dpc-cat-card .dpc-card-label.multi-word:hover::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 4px;
+    }
+    .dpc-cat-card .dpc-card-label.multi-word {
+        scrollbar-width: thin;
+        scrollbar-color: transparent transparent;
+    }
+    .dpc-cat-card .dpc-card-label.multi-word:hover {
+        scrollbar-color: #ccc transparent;
     }
     .dpc-cat-card .dpc-card-count { font-size: 11px; color: #aaa; margin-top: 4px; }
 
@@ -905,6 +933,20 @@ function dpc_render_category_page() {
         });
         cards.forEach(function(c){ grid.appendChild(c); });
     }
+
+    // Auto-detect long category labels and wrap them to 2 lines
+    document.addEventListener('DOMContentLoaded', function() {
+        var labels = document.querySelectorAll('.dpc-card-label');
+        labels.forEach(function(label) {
+            var text = label.textContent.trim();
+            var wordCount = text.split(/\s+/).length;
+            if (wordCount > 2) {
+                label.classList.add('multi-word');
+                label.style.padding = '8px 18px';
+                label.style.minWidth = '140px';
+            }
+        });
+    });
     </script>
     <?php
     echo '</main></div>'; // close #main and #primary
