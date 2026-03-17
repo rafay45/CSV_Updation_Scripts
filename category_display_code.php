@@ -57,7 +57,7 @@ function dpc_styles() {
         display: flex; align-items: center; justify-content: center;
         margin-bottom: 15px; border-radius: 8px; overflow: hidden;
     }
-    .category-image img { max-width: 90%; max-height: 90%; object-fit: contain; }
+    .category-image img { width: 100%; height: 100%; object-fit: cover; }
     .category-button {
         background: #327A1F; color: white;
         padding: 12px 20px; text-align: center;
@@ -111,33 +111,44 @@ function dpc_styles() {
     }
     .dpc-cat-card {
         background: #fff; border: 2px solid #e5e5e5;
-        border-radius: 16px; padding: 30px 20px 40px;
+        border-radius: 16px; padding: 0 0 40px 0;
         text-align: center; text-decoration: none;
         display: flex; flex-direction: column; align-items: center;
         position: relative; transition: all 0.25s ease;
         min-height: 160px; overflow: visible;
+    }
+    .dpc-cat-card .dpc-card-icon:first-child {
+        border-top-left-radius: 14px;
+        border-top-right-radius: 14px;
     }
     .dpc-cat-card:hover {
         border-color: #327A1F; transform: translateY(-5px);
         box-shadow: 0 8px 20px rgba(0,0,0,0.1);
     }
     .dpc-cat-card .dpc-card-icon {
-        width: 90px; height: 90px;
+        width: 100%; height: 150px;
         display: flex; align-items: center; justify-content: center;
-        margin-bottom: 10px;
+        margin-bottom: 0;
+        overflow: hidden;
     }
-    .dpc-cat-card .dpc-card-icon img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .dpc-cat-card .dpc-card-icon img { width: 100%; height: 100%; object-fit: cover; }
     .dpc-cat-card .dpc-card-label {
         font-size: 13px; font-weight: 600; color: #333;
         background: #fff; border: 1px solid #e5e5e5;
-        border-radius: 20px; padding: 8px 14px;
+        border-radius: 20px; padding: 10px 18px;
         position: absolute; bottom: 0; left: 50%;
         transform: translate(-50%, 50%);
         min-width: 120px;
-        max-width: 95%;
+        max-width: 90%;
         text-align: center;
         line-height: 1.35;
         white-space: nowrap;
+        transition: all 0.25s ease;
+    }
+    .dpc-cat-card:hover .dpc-card-label {
+        background: #327A1F;
+        color: #fff;
+        border-color: #327A1F;
     }
     .dpc-cat-card .dpc-card-label.multi-word {
         white-space: normal;
