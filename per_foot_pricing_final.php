@@ -2,9 +2,42 @@
 // Per Foot Pricing - FINAL VERSION (No JS, No Layout Break)
 // ==========================================
 
+// Check if product has UOM = LNF
+if (!function_exists('pfp_is_linear_feet_product')) {
+    function pfp_is_linear_feet_product($product) {
+        if (!$product) return false;
+        $attributes = $product->get_attributes();
+
+        foreach ($attributes as $attr_name => $attr_obj) {
+            $label = strtolower(wc_attribute_label($attr_name));
+            if ($label === 'uom' || $label === 'unit of measurement' || $label === 'unit of measure') {
+                if (is_object($attr_obj) && method_exists($attr_obj, 'is_taxonomy')) {
+                    if ($attr_obj->is_taxonomy()) {
+                        $terms = wp_get_post_terms($product->get_id(), $attr_name, array('fields' => 'names'));
+                        if (!is_wp_error($terms) && !empty($terms)) {
+                            return strtoupper(trim($terms[0])) === 'LNF';
+                        }
+                    } else {
+                        $options = $attr_obj->get_options();
+                        if (!empty($options)) {
+                            $val = is_array($options) ? $options[0] : $options;
+                            return strtoupper(trim($val)) === 'LNF';
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+}
+
 if (!function_exists('pfp_get_product_length')) {
     function pfp_get_product_length($product) {
         if (!$product) return 1;
+
+        // IMPORTANT: Only process if UOM = LNF
+        if (!pfp_is_linear_feet_product($product)) return 1;
+
         $attributes = $product->get_attributes();
         foreach ($attributes as $attr_name => $attr_obj) {
             $label = strtolower(wc_attribute_label($attr_name));

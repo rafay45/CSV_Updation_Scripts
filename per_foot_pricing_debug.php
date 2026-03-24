@@ -1,6 +1,45 @@
 // ==========================================
-// Per Foot Pricing - CORRECT POSITIONING
+// Per Foot Pricing - DEBUG VERSION
 // ==========================================
+
+// Debug function to see all attributes
+if (!function_exists('pfp_debug_attributes')) {
+    add_action('woocommerce_single_product_summary', 'pfp_debug_attributes', 5);
+    function pfp_debug_attributes() {
+        global $product;
+        if (!$product) return;
+
+        echo '<div style="background: #f0f0f0; padding: 15px; margin: 10px 0; border: 2px solid #000;">';
+        echo '<strong>DEBUG - Product Attributes:</strong><br>';
+
+        $attributes = $product->get_attributes();
+        foreach ($attributes as $attr_name => $attr_obj) {
+            $label = wc_attribute_label($attr_name);
+            echo "Attribute Name: <strong>$attr_name</strong><br>";
+            echo "Attribute Label: <strong>$label</strong><br>";
+            echo "Label Lowercase: <strong>" . strtolower($label) . "</strong><br>";
+
+            if (is_object($attr_obj) && method_exists($attr_obj, 'is_taxonomy')) {
+                if ($attr_obj->is_taxonomy()) {
+                    $terms = wp_get_post_terms($product->get_id(), $attr_name, array('fields' => 'names'));
+                    if (!is_wp_error($terms) && !empty($terms)) {
+                        echo "Value (Taxonomy): <strong>" . $terms[0] . "</strong><br>";
+                        echo "Value Uppercase: <strong>" . strtoupper(trim($terms[0])) . "</strong><br>";
+                    }
+                } else {
+                    $options = $attr_obj->get_options();
+                    if (!empty($options)) {
+                        $val = is_array($options) ? $options[0] : $options;
+                        echo "Value (Custom): <strong>$val</strong><br>";
+                        echo "Value Uppercase: <strong>" . strtoupper(trim($val)) . "</strong><br>";
+                    }
+                }
+            }
+            echo "<br>";
+        }
+        echo '</div>';
+    }
+}
 
 // Check if product has UOM = LNF
 if (!function_exists('pfp_is_linear_feet_product')) {
@@ -83,7 +122,7 @@ if (!function_exists('pfp_modify_price_display')) {
     }
 }
 
-// Add per foot info AFTER the main price (Simple text only)
+// Add per foot info AFTER the main price
 if (!function_exists('pfp_add_per_foot_info_to_price')) {
     add_filter('woocommerce_get_price_html', 'pfp_add_per_foot_info_to_price', 20, 2);
     function pfp_add_per_foot_info_to_price($price_html, $product) {
@@ -104,25 +143,12 @@ if (!function_exists('pfp_add_per_foot_info_to_price')) {
         $price_html .= '<span style="font-weight: 600;">PRICE PER FOOT</span> ' . wc_price($per_foot_price) . ' / ft';
         $price_html .= '</div>';
 
+        // Yellow notice (added here to avoid layout issues)
+        $price_html .= '<div class="pfp-notice" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 15px; margin: 15px 0; font-size: 13px; color: #856404; line-height: 1.5;">';
+        $price_html .= '<strong>Note:</strong> This product is sold as a complete piece of ' . $length . ' feet. Quantity of 1 = ' . $length . ' feet.';
+        $price_html .= '</div>';
+
         return $price_html;
-    }
-}
-
-// Yellow notice AFTER description (above SKU/categories section)
-if (!function_exists('pfp_add_notice_after_description')) {
-    add_action('woocommerce_single_product_summary', 'pfp_add_notice_after_description', 25);
-
-    function pfp_add_notice_after_description() {
-        global $product;
-        if (!$product || $product->get_type() === 'variable') return;
-
-        $length = pfp_get_product_length($product);
-        if ($length <= 1) return;
-        ?>
-        <div class="pfp-notice" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 15px; margin: 15px 0; font-size: 13px; color: #856404; line-height: 1.5;">
-            <strong>Note:</strong> This product is sold as a complete piece of <?php echo $length; ?> feet. Quantity of 1 = <?php echo $length; ?> feet.
-        </div>
-        <?php
     }
 }
 

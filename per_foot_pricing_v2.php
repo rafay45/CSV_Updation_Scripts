@@ -1,32 +1,49 @@
 // ==========================================
-// Per Foot Pricing - CORRECT POSITIONING
+// Per Foot Pricing - VERSION 2 (Meta Field Check)
 // ==========================================
 
-// Check if product has UOM = LNF
+// Check if product has UOM = LNF (checking all possible locations)
 if (!function_exists('pfp_is_linear_feet_product')) {
     function pfp_is_linear_feet_product($product) {
         if (!$product) return false;
-        $attributes = $product->get_attributes();
 
+        $product_id = $product->get_id();
+
+        // Method 1: Check custom attributes
+        $attributes = $product->get_attributes();
         foreach ($attributes as $attr_name => $attr_obj) {
             $label = strtolower(wc_attribute_label($attr_name));
-            if ($label === 'uom' || $label === 'unit of measurement' || $label === 'unit of measure') {
+
+            // Check if this is UOM attribute
+            if (strpos($label, 'unit') !== false || strpos($label, 'uom') !== false) {
                 if (is_object($attr_obj) && method_exists($attr_obj, 'is_taxonomy')) {
                     if ($attr_obj->is_taxonomy()) {
-                        $terms = wp_get_post_terms($product->get_id(), $attr_name, array('fields' => 'names'));
+                        $terms = wp_get_post_terms($product_id, $attr_name, array('fields' => 'names'));
                         if (!is_wp_error($terms) && !empty($terms)) {
-                            return strtoupper(trim($terms[0])) === 'LNF';
+                            $value = strtoupper(trim($terms[0]));
+                            if ($value === 'LNF') return true;
                         }
                     } else {
                         $options = $attr_obj->get_options();
                         if (!empty($options)) {
                             $val = is_array($options) ? $options[0] : $options;
-                            return strtoupper(trim($val)) === 'LNF';
+                            $value = strtoupper(trim($val));
+                            if ($value === 'LNF') return true;
                         }
                     }
                 }
             }
         }
+
+        // Method 2: Check meta fields directly
+        $meta_keys = array('_unit_of_measure', 'unit_of_measure', 'uom', '_uom', 'pa_unit-of-measure');
+        foreach ($meta_keys as $meta_key) {
+            $meta_value = get_post_meta($product_id, $meta_key, true);
+            if ($meta_value && strtoupper(trim($meta_value)) === 'LNF') {
+                return true;
+            }
+        }
+
         return false;
     }
 }
@@ -38,13 +55,16 @@ if (!function_exists('pfp_get_product_length')) {
         // IMPORTANT: Only process if UOM = LNF
         if (!pfp_is_linear_feet_product($product)) return 1;
 
+        $product_id = $product->get_id();
+
+        // Method 1: Check attributes
         $attributes = $product->get_attributes();
         foreach ($attributes as $attr_name => $attr_obj) {
             $label = strtolower(wc_attribute_label($attr_name));
             if ($label === 'length') {
                 if (is_object($attr_obj) && method_exists($attr_obj, 'is_taxonomy')) {
                     if ($attr_obj->is_taxonomy()) {
-                        $terms = wp_get_post_terms($product->get_id(), $attr_name, array('fields' => 'names'));
+                        $terms = wp_get_post_terms($product_id, $attr_name, array('fields' => 'names'));
                         if (!is_wp_error($terms) && !empty($terms)) {
                             preg_match('/[\d.]+/', $terms[0], $matches);
                             if (!empty($matches)) return floatval($matches[0]);
@@ -60,6 +80,17 @@ if (!function_exists('pfp_get_product_length')) {
                 }
             }
         }
+
+        // Method 2: Check meta fields directly
+        $meta_keys = array('_length', 'length', 'pa_length');
+        foreach ($meta_keys as $meta_key) {
+            $meta_value = get_post_meta($product_id, $meta_key, true);
+            if ($meta_value) {
+                preg_match('/[\d.]+/', $meta_value, $matches);
+                if (!empty($matches)) return floatval($matches[0]);
+            }
+        }
+
         return 1;
     }
 }
@@ -83,7 +114,7 @@ if (!function_exists('pfp_modify_price_display')) {
     }
 }
 
-// Add per foot info AFTER the main price (Simple text only)
+// Add per foot info AFTER the main price
 if (!function_exists('pfp_add_per_foot_info_to_price')) {
     add_filter('woocommerce_get_price_html', 'pfp_add_per_foot_info_to_price', 20, 2);
     function pfp_add_per_foot_info_to_price($price_html, $product) {
@@ -104,25 +135,12 @@ if (!function_exists('pfp_add_per_foot_info_to_price')) {
         $price_html .= '<span style="font-weight: 600;">PRICE PER FOOT</span> ' . wc_price($per_foot_price) . ' / ft';
         $price_html .= '</div>';
 
+        // Yellow notice
+        $price_html .= '<div class="pfp-notice" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 15px; margin: 15px 0; font-size: 13px; color: #856404; line-height: 1.5;">';
+        $price_html .= '<strong>Note:</strong> This product is sold as a complete piece of ' . $length . ' feet. Quantity of 1 = ' . $length . ' feet.';
+        $price_html .= '</div>';
+
         return $price_html;
-    }
-}
-
-// Yellow notice AFTER description (above SKU/categories section)
-if (!function_exists('pfp_add_notice_after_description')) {
-    add_action('woocommerce_single_product_summary', 'pfp_add_notice_after_description', 25);
-
-    function pfp_add_notice_after_description() {
-        global $product;
-        if (!$product || $product->get_type() === 'variable') return;
-
-        $length = pfp_get_product_length($product);
-        if ($length <= 1) return;
-        ?>
-        <div class="pfp-notice" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 15px; margin: 15px 0; font-size: 13px; color: #856404; line-height: 1.5;">
-            <strong>Note:</strong> This product is sold as a complete piece of <?php echo $length; ?> feet. Quantity of 1 = <?php echo $length; ?> feet.
-        </div>
-        <?php
     }
 }
 
