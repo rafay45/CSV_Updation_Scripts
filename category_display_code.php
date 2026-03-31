@@ -1,27 +1,3 @@
-<?php
-/**
- * category_display_code.php
- * Add this file to your WordPress plugin or paste into functions.php
- *
- * TWO things this file does:
- *
- * 1. Shortcode [dynamic_product_categories]
- *    → Shows main category cards on any page
- *    → Each card links to its real WooCommerce category URL
- *
- * 2. Hook: woocommerce_before_subcategory_list  (product_cat archive pages)
- *    → On /product-category/vinyl/          → shows subcategory cards
- *    → On /product-category/vinyl/privacy/  → shows sub-subcategory cards (or tags)
- *    → On /product-category/vinyl/privacy/tools-misc/  → shows tag cards
- *    → On above URL + ?tag=top-rail         → shows products with filters
- *
- * Upload location: wp-content/themes/flatsome-child/functions.php  (add_action at bottom)
- * OR as a standalone plugin file.
- */
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// SHARED CSS
-// ═══════════════════════════════════════════════════════════════════════════════
 function dpc_styles() {
     ?>
     <style>
@@ -57,7 +33,7 @@ function dpc_styles() {
         display: flex; align-items: center; justify-content: center;
         margin-bottom: 15px; border-radius: 8px; overflow: hidden;
     }
-    .category-image img { width: 100%; height: 100%; object-fit: cover; }
+    .category-image img { max-width: 90%; max-height: 90%; object-fit: contain; }
     .category-button {
         background: #327A1F; color: white;
         padding: 12px 20px; text-align: center;
@@ -104,36 +80,35 @@ function dpc_styles() {
     /* ── Subcategory / Tag card grid ── */
     .dpc-card-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 20px 20px;
-        row-gap: 50px;
-        margin-bottom: 40px;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 20px 20px;
+    row-gap: 50px;
+    margin-bottom: 40px;
     }
     .dpc-cat-card {
         background: #fff; border: 2px solid #e5e5e5;
-        border-radius: 16px; padding: 0 0 40px 0;
-        text-align: center; text-decoration: none;
-        display: flex; flex-direction: column; align-items: center;
-        position: relative; transition: all 0.25s ease;
-        min-height: 160px; overflow: visible;
+    border-radius: 16px; padding: 0 0 0px 0;
+    text-align: center; text-decoration: none;
+    display: flex; flex-direction: column; align-items: center;
+    position: relative; transition: all 0.25s ease;
+    min-height: 154px; overflow: visible;
     }
     .dpc-cat-card .dpc-card-icon:first-child {
-        border-top-left-radius: 14px;
-        border-top-right-radius: 14px;
+        border-radius: 14px;
     }
     .dpc-cat-card:hover {
         border-color: #327A1F; transform: translateY(-5px);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
     }
     .dpc-cat-card .dpc-card-icon {
-        width: 100%; height: 150px;
-        display: flex; align-items: center; justify-content: center;
-        margin-bottom: 0;
-        overflow: hidden;
+          width: 100%; height: 150px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 0;
+    overflow: hidden;
     }
-    .dpc-cat-card .dpc-card-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .dpc-cat-card .dpc-card-icon img { width: 100%; height: 100%;  }
     .dpc-cat-card .dpc-card-label {
-        font-size: 13px; font-weight: 600; color: #333;
+       font-size: 13px; font-weight: 600; color: #333;
         background: #fff; border: 1px solid #e5e5e5;
         border-radius: 20px; padding: 10px 18px;
         position: absolute; bottom: 0; left: 50%;
@@ -145,37 +120,23 @@ function dpc_styles() {
         white-space: nowrap;
         transition: all 0.25s ease;
     }
-    .dpc-cat-card:hover .dpc-card-label {
+     font-size: 13px; font-weight: 600; color: #333;
+        background: #fff; border: 1px solid #e5e5e5;
+        border-radius: 20px; padding: 10px 18px;
+        position: absolute; bottom: 0; left: 50%;
+        transform: translate(-50%, 50%);
+        min-width: 120px;
+        max-width: 90%;
+        text-align: center;
+        line-height: 1.35;
+        white-space: nowrap;
+        transition: all 0.25s ease;
+    .dpc-cat-card .dpc-card-count { font-size: 11px; color: #aaa; margin-top: 4px; }
+.dpc-cat-card:hover .dpc-card-label {
         background: #327A1F;
         color: #fff;
         border-color: #327A1F;
     }
-    .dpc-cat-card .dpc-card-label.multi-word {
-        white-space: normal;
-        max-height: 2.7em;
-        overflow-y: auto;
-        overflow-x: hidden;
-        display: block;
-    }
-    .dpc-cat-card .dpc-card-label.multi-word::-webkit-scrollbar {
-        width: 4px;
-    }
-    .dpc-cat-card .dpc-card-label.multi-word::-webkit-scrollbar-thumb {
-        background: transparent;
-    }
-    .dpc-cat-card .dpc-card-label.multi-word:hover::-webkit-scrollbar-thumb {
-        background: #ccc;
-        border-radius: 4px;
-    }
-    .dpc-cat-card .dpc-card-label.multi-word {
-        scrollbar-width: thin;
-        scrollbar-color: transparent transparent;
-    }
-    .dpc-cat-card .dpc-card-label.multi-word:hover {
-        scrollbar-color: #ccc transparent;
-    }
-    .dpc-cat-card .dpc-card-count { font-size: 11px; color: #aaa; margin-top: 4px; }
-
     /* ── Products layout ── */
     .dpc-products-layout { display: grid; grid-template-columns: 240px 1fr; gap: 30px; }
 
@@ -692,12 +653,16 @@ function display_dynamic_product_categories() {
     <?php
     return ob_get_clean();
 }
-
+if (!defined('WSF_OLD_CATALOG_ENABLED')) {
+    define('WSF_OLD_CATALOG_ENABLED', true);
+}
 // ═══════════════════════════════════════════════════════════════════════════════
 // CATEGORY PAGE OVERRIDE
 // Uses template_redirect to render a fully custom page (bypasses WooCommerce entirely)
 // ═══════════════════════════════════════════════════════════════════════════════
-add_action('template_redirect', 'dpc_override_category_page');
+if (WSF_OLD_CATALOG_ENABLED) {
+    add_action('template_redirect', 'dpc_override_category_page');
+}
 function dpc_override_category_page() {
     if (!is_tax('product_cat')) return;
 
@@ -766,6 +731,190 @@ function dpc_render_category_page() {
 
         <?php if ($has_children): ?>
             <!-- ── Has subcategories: show category cards ── -->
+
+            <?php
+            // ═══════════════════════════════════════════════════════════════════════
+            // INJECT ACCORDIONS + FORM for FIRST-LEVEL SUBCATEGORIES
+            // ═══════════════════════════════════════════════════════════════════════
+            $show_accordion = false;
+            if (!empty($current_cat->parent) && $current_cat->parent != 0) {
+                $parent_cat = get_term($current_cat->parent, 'product_cat');
+                if (!is_wp_error($parent_cat) && (empty($parent_cat->parent) || $parent_cat->parent == 0)) {
+                    $show_accordion = true;
+                }
+            }
+
+            if ($show_accordion):
+                // Get accordion data
+                $intro_text   = $current_cat->description;
+                $video_ids    = get_term_meta($cat_id, 'category_video_ids', true);
+                $review_link  = get_term_meta($cat_id, 'category_review_link', true);
+
+                $videos = array();
+                if (!empty($video_ids)) {
+                    $videos = array_filter(array_map('trim', explode(',', $video_ids)));
+                }
+            ?>
+                <!-- ACCORDIONS SECTION -->
+                <div class="wsf-category-accordion-section" style="width: 100%; max-width: 1200px; margin: 40px auto; padding: 20px; clear: both;">
+                    <div class="wsf-accordions" style="margin-bottom: 30px;">
+
+                        <!-- ═══════════════════════════════════════════════════════════════════════ -->
+                        <!-- OVERVIEW ACCORDION -->
+                        <!-- ═══════════════════════════════════════════════════════════════════════ -->
+                        <div class="wsf-acc-item" style="border: 1px solid #e0e0e0; margin-bottom: 10px; border-radius: 6px; overflow: hidden; background: #fff;">
+                            <div class="wsf-acc-header" style="background: #f5f5f5; padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 700; color: #333;" onclick="wsfToggleAcc('overview')">
+                                <span>Overview</span>
+                                <span class="wsf-acc-icon" style="font-size: 24px; font-weight: bold; color: #666;">∨</span>
+                            </div>
+                            <div class="wsf-acc-content" id="wsf-acc-overview" style="display: none; padding: 20px; background: #f9f9f9; border-top: 1px solid #e0e0e0;">
+                                <?php if (!empty($intro_text)): ?>
+                                    <?php echo wpautop(wp_kses_post($intro_text)); ?>
+                                <?php else: ?>
+                                    <p style="color: #888;">No overview content available.</p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- ═══════════════════════════════════════════════════════════════════════ -->
+                        <!-- SPECIFICATIONS ACCORDION -->
+                        <!-- ═══════════════════════════════════════════════════════════════════════ -->
+                        <div class="wsf-acc-item" style="border: 1px solid #e0e0e0; margin-bottom: 10px; border-radius: 6px; overflow: hidden; background: #fff;">
+                            <div class="wsf-acc-header" style="background: #f5f5f5; padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 700; color: #333;" onclick="wsfToggleAcc('specifications')">
+                                <span>Specifications</span>
+                                <span class="wsf-acc-icon" style="font-size: 24px; font-weight: bold; color: #666;">∨</span>
+                            </div>
+                            <div class="wsf-acc-content" id="wsf-acc-specifications" style="display: none; padding: 20px; background: #f9f9f9; border-top: 1px solid #e0e0e0;">
+                                <p style="color: #888;">No specifications available at this time.</p>
+                            </div>
+                        </div>
+
+                        <!-- ═══════════════════════════════════════════════════════════════════════ -->
+                        <!-- VIDEOS ACCORDION -->
+                        <!-- ═══════════════════════════════════════════════════════════════════════ -->
+                        <div class="wsf-acc-item" style="border: 1px solid #e0e0e0; margin-bottom: 10px; border-radius: 6px; overflow: hidden; background: #fff;">
+                            <div class="wsf-acc-header" style="background: #f5f5f5; padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 700; color: #333;" onclick="wsfToggleAcc('videos')">
+                                <span>Videos</span>
+                                <span class="wsf-acc-icon" style="font-size: 24px; font-weight: bold; color: #666;">∨</span>
+                            </div>
+                            <div class="wsf-acc-content" id="wsf-acc-videos" style="display: none; padding: 20px; background: #f9f9f9; border-top: 1px solid #e0e0e0;">
+                                <?php if (!empty($videos)): ?>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+                                        <?php foreach ($videos as $vid_id): ?>
+                                            <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                                <iframe
+                                                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+                                                    src="https://www.youtube.com/embed/<?php echo esc_attr($vid_id); ?>"
+                                                    frameborder="0"
+                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                    allowfullscreen>
+                                                </iframe>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <p style="color: #888;">No videos available for this category.</p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- ═══════════════════════════════════════════════════════════════════════ -->
+                        <!-- REVIEWS ACCORDION -->
+                        <!-- ═══════════════════════════════════════════════════════════════════════ -->
+                        <div class="wsf-acc-item" style="border: 1px solid #e0e0e0; margin-bottom: 10px; border-radius: 6px; overflow: hidden; background: #fff;">
+                            <div class="wsf-acc-header" style="background: #f5f5f5; padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 700; color: #333;" onclick="wsfToggleAcc('reviews')">
+                                <span>Reviews</span>
+                                <span class="wsf-acc-icon" style="font-size: 24px; font-weight: bold; color: #666;">∨</span>
+                            </div>
+                            <div class="wsf-acc-content" id="wsf-acc-reviews" style="display: none; padding: 20px; background: #f9f9f9; border-top: 1px solid #e0e0e0;">
+                                <?php if (!empty($review_link)): ?>
+                                    <p style="font-size: 16px; margin-bottom: 15px; color: #333;">
+                                        Read what our customers have to say about this product:
+                                    </p>
+                                    <a href="<?php echo esc_url($review_link); ?>"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       style="display: inline-block; padding: 12px 24px; background: #327A1F; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600; transition: background 0.3s ease;">
+                                        View Google Reviews →
+                                    </a>
+                                <?php else: ?>
+                                    <p style="color: #888;">No reviews available for this category yet.</p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- ═══════════════════════════════════════════════════════════════════════ -->
+                        <!-- DOWNLOADS ACCORDION -->
+                        <!-- ═══════════════════════════════════════════════════════════════════════ -->
+                        <div class="wsf-acc-item" style="border: 1px solid #e0e0e0; margin-bottom: 10px; border-radius: 6px; overflow: hidden; background: #fff;">
+                            <div class="wsf-acc-header" style="background: #f5f5f5; padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 700; color: #333;" onclick="wsfToggleAcc('downloads')">
+                                <span>Downloads</span>
+                                <span class="wsf-acc-icon" style="font-size: 24px; font-weight: bold; color: #666;">∨</span>
+                            </div>
+                            <div class="wsf-acc-content" id="wsf-acc-downloads" style="display: none; padding: 20px; background: #f9f9f9; border-top: 1px solid #e0e0e0;">
+                                <p style="color: #888;">No downloadable resources available at this time.</p>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- CONTACT FORM -->
+                    <div class="wsf-contact-form-wrapper" style="margin: 30px 0; padding: 20px; background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px;">
+                        <h2 style="text-align: center; font-size: 28px; font-weight: 700; color: #333; margin-bottom: 15px;">Get Your Free Vinyl Fencing Quote</h2>
+                        <p style="text-align: center; font-size: 16px; color: #666; margin-bottom: 20px;">
+                            Please Fill Out This Form For A Free Quote. You Can Email Customer Service Directly at:<br>
+                            <a href="mailto:orders@wholesalefencing.com" style="color: #327A1F; text-decoration: none; font-weight: 600;">orders@wholesalefencing.com</a>
+                        </p>
+                        <?php echo do_shortcode('[wooaddon_from]'); ?>
+                    </div>
+                </div>
+
+                <script>
+                // ═══════════════════════════════════════════════════════════════════════
+                // ACCORDION TOGGLE FUNCTION (Global Scope)
+                // ═══════════════════════════════════════════════════════════════════════
+                window.wsfToggleAcc = function(section) {
+                    var content = document.getElementById('wsf-acc-' + section);
+                    if (!content) return;
+
+                    var header = content.previousElementSibling;
+                    var icon = header.querySelector('.wsf-acc-icon');
+                    var isOpen = content.style.display === 'block';
+
+                    // Close all other accordions
+                    document.querySelectorAll('.wsf-accordions .wsf-acc-content').forEach(function(item) {
+                        if (item !== content) {
+                            item.style.display = 'none';
+                            var otherIcon = item.previousElementSibling.querySelector('.wsf-acc-icon');
+                            if (otherIcon) otherIcon.textContent = '∨';
+                        }
+                    });
+
+                    // Toggle current accordion
+                    if (isOpen) {
+                        content.style.display = 'none';
+                        icon.textContent = '∨';
+                    } else {
+                        content.style.display = 'block';
+                        icon.textContent = '∧';
+                    }
+                };
+                </script>
+
+                <style>
+                /* Hover effects for accordion headers */
+                .wsf-acc-header:hover {
+                    background: #e8e8e8 !important;
+                }
+                .wsf-contact-form-wrapper a[href^="mailto:"]:hover {
+                    text-decoration: underline !important;
+                }
+                .wsf-acc-content a[style*="background: #327A1F"]:hover {
+                    background: #265a16 !important;
+                }
+                </style>
+            <?php endif; ?>
+
             <div class="dpc-card-grid">
                 <?php foreach ($child_cats as $child):
                     $thumb_id  = get_term_meta($child->term_id, 'thumbnail_id', true);
@@ -793,172 +942,7 @@ function dpc_render_category_page() {
 
     </div><!-- .dpc-cat-page -->
 
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.dpc-filter-cb').forEach(function(cb) {
-            cb.addEventListener('change', dpcApplyFilters);
-        });
-        var clearBtn = document.getElementById('dpc-clear-btn');
-        if (clearBtn) clearBtn.addEventListener('click', dpcClearFilters);
-    });
-    function dpcApplyFilters() {
-        var active = {};
-        document.querySelectorAll('.dpc-filter-cb:checked').forEach(function(cb) {
-            var attr = cb.dataset.attr, val = cb.dataset.val;
-            if (!active[attr]) active[attr] = [];
-            active[attr].push(val.toLowerCase());
-        });
-
-        // Show/hide Clear All button
-        var clearBtn = document.getElementById('dpc-clear-btn');
-        if (clearBtn) {
-            if (Object.keys(active).length > 0) {
-                clearBtn.classList.add('show');
-            } else {
-                clearBtn.classList.remove('show');
-            }
-        }
-
-        // Filter products
-        var visibleCards = [];
-        document.querySelectorAll('.dpc-product-card').forEach(function(card) {
-            if (!Object.keys(active).length) {
-                card.style.display = '';
-                visibleCards.push(card);
-                return;
-            }
-            var attrs = JSON.parse(card.dataset.attrs || '{}'), show = true;
-            for (var attr in active) {
-                var cv = (attrs[attr] || '').toLowerCase();
-                if (!active[attr].some(function(v){ return cv.indexOf(v) !== -1; })) { show = false; break; }
-            }
-            card.style.display = show ? '' : 'none';
-            if (show) visibleCards.push(card);
-        });
-
-        // Update "No results" message
-        var grid = document.querySelector('.dpc-products-grid');
-        if (grid) {
-            var nr = grid.querySelector('.dpc-no-results');
-            if (nr) nr.style.display = visibleCards.length === 0 ? '' : 'none';
-        }
-
-        // Dynamic filter update: count available options and update counts
-        var availableAttrs = {};
-        visibleCards.forEach(function(card) {
-            var attrs = JSON.parse(card.dataset.attrs || '{}');
-            for (var attr in attrs) {
-                if (!availableAttrs[attr]) availableAttrs[attr] = {};
-                var vals = attrs[attr].split(',').map(function(v){ return v.trim().toLowerCase(); });
-                vals.forEach(function(v){
-                    if (v) {
-                        if (!availableAttrs[attr][v]) availableAttrs[attr][v] = 0;
-                        availableAttrs[attr][v]++;
-                    }
-                });
-            }
-        });
-
-        document.querySelectorAll('.dpc-filter-cb').forEach(function(cb) {
-            var attr = cb.dataset.attr, val = cb.dataset.val.toLowerCase();
-            var li = cb.closest('li');
-            if (!li) return;
-
-            var countSpan = li.querySelector('.dpc-fc');
-            var count = 0;
-
-            // If this filter is checked, always show it
-            if (cb.checked) {
-                li.classList.remove('dpc-hidden');
-                if (countSpan && availableAttrs[attr] && availableAttrs[attr][val]) {
-                    countSpan.textContent = '(' + availableAttrs[attr][val] + ')';
-                }
-                return;
-            }
-
-            // If no filters active, show all with original counts (restore from data attribute)
-            if (!Object.keys(active).length) {
-                li.classList.remove('dpc-hidden');
-                if (countSpan) {
-                    var originalCount = li.dataset.originalCount;
-                    if (originalCount) countSpan.textContent = '(' + originalCount + ')';
-                }
-                return;
-            }
-
-            // Check if this option is available in currently visible products
-            if (availableAttrs[attr] && availableAttrs[attr][val]) {
-                li.classList.remove('dpc-hidden');
-                count = availableAttrs[attr][val];
-                if (countSpan) countSpan.textContent = '(' + count + ')';
-            } else {
-                li.classList.add('dpc-hidden');
-            }
-        });
-    }
-    function dpcClearFilters() {
-        document.querySelectorAll('.dpc-filter-cb:checked').forEach(function(cb){ cb.checked = false; });
-        dpcApplyFilters();
-    }
-    function dpcToggleFilterDrawer() {
-        var drawer = document.getElementById('dpc-filter-drawer');
-        var overlay = document.getElementById('dpc-filter-overlay');
-
-        if (drawer && overlay) {
-            var isOpen = drawer.classList.contains('open');
-
-            if (isOpen) {
-                // Close drawer
-                drawer.classList.remove('open');
-                overlay.classList.remove('show');
-                document.body.style.overflow = '';
-            } else {
-                // Open drawer
-                drawer.classList.add('open');
-                overlay.classList.add('show');
-                document.body.style.overflow = 'hidden';
-            }
-        }
-    }
-    function dpcToggleAccordion(btn) {
-        var accordion = btn.closest('.dpc-filter-group-accordion');
-        if (accordion) {
-            accordion.classList.toggle('open');
-        }
-    }
-    function dpcHandleSort(val) {
-        dpcSort(val);
-    }
-    function dpcSort(val) {
-        var grid = document.getElementById('dpc-grid');
-        if (!grid) return;
-        var cards = Array.from(grid.querySelectorAll('.dpc-product-card'));
-        cards.sort(function(a, b) {
-            if (val === 'title_asc') return a.dataset.title.localeCompare(b.dataset.title);
-            if (val === 'price_asc' || val === 'price_desc') {
-                var pa = parseFloat(a.dataset.price.replace(/[^0-9.]/g,''))||0;
-                var pb = parseFloat(b.dataset.price.replace(/[^0-9.]/g,''))||0;
-                return val === 'price_asc' ? pa-pb : pb-pa;
-            }
-            return 0;
-        });
-        cards.forEach(function(c){ grid.appendChild(c); });
-    }
-
-    // Auto-detect long category labels and wrap them to 2 lines
-    document.addEventListener('DOMContentLoaded', function() {
-        var labels = document.querySelectorAll('.dpc-card-label');
-        labels.forEach(function(label) {
-            var text = label.textContent.trim();
-            var wordCount = text.split(/\s+/).length;
-            if (wordCount > 2) {
-                label.classList.add('multi-word');
-                label.style.padding = '8px 18px';
-                label.style.minWidth = '140px';
-            }
-        });
-    });
-    </script>
+    
     <?php
     echo '</main></div>'; // close #main and #primary
 }
@@ -983,7 +967,9 @@ function dpc_count_products($term_id) {
 // Applies only to products that have NO Flatsome page builder content
 // (i.e. newly imported products via CSV)
 // ═══════════════════════════════════════════════════════════════════════════════
-add_action('template_redirect', 'dpc_single_product_override');
+if (WSF_OLD_CATALOG_ENABLED) {
+    add_action('template_redirect', 'dpc_single_product_override');
+}
 function dpc_single_product_override() {
     if (!is_singular('product')) return;
 
@@ -1722,11 +1708,11 @@ function dpc_render_products($cat_id) {
                          data-attrs="<?php echo $attrs_json; ?>"
                          data-title="<?php echo esc_attr($p['title']); ?>"
                          data-price="<?php echo esc_attr(strip_tags($p['price_html'])); ?>">
-                        <a href="<?php echo esc_url($p['permalink']); ?>" class="dpc-img-wrap">
+                        <a href="<?php echo esc_url($p['permalink']); ?>" class="dpc-img-wrap wsf-scroll-link" data-scroll-target="wsf-product-detail">
                             <?php echo $p['thumbnail']; ?>
                         </a>
                         <div class="dpc-card-body">
-                            <h4><a href="<?php echo esc_url($p['permalink']); ?>"><?php echo esc_html($p['title']); ?></a></h4>
+                            <h4><a href="<?php echo esc_url($p['permalink']); ?>" class="wsf-scroll-link" data-scroll-target="wsf-product-detail"><?php echo esc_html($p['title']); ?></a></h4>
                             <div class="dpc-price"><?php echo wp_kses_post($p['price_html']); ?></div>
                             <a href="<?php echo $p['add_to_cart']; ?>" class="dpc-add-to-cart-btn">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -1745,4 +1731,3 @@ function dpc_render_products($cat_id) {
     </div>
     <?php
 }
-?>
