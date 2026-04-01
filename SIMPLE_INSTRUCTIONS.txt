@@ -1,0 +1,82 @@
+====================================================================
+PDF DOWNLOAD FIX - FINAL SOLUTION (Universal - Any Site)
+====================================================================
+
+✅ WORKS WITH ANY PDF URL:
+- Main site PDFs
+- Staging site PDFs
+- External site PDFs
+- Cross-domain PDFs
+
+====================================================================
+UPLOAD THESE FILES:
+====================================================================
+
+1. Theme Directory: /wp-content/themes/YOUR-THEME-NAME/
+   ----------------------------------------------------
+   - subcategory_complete_layout.php (UPDATED)
+   - category_custom_fields.php
+   - download-pdf.php (NEW - Important!)
+
+2. Delete old files (not needed):
+   - pdf_download_proxy.php (delete this)
+
+====================================================================
+HOW IT WORKS:
+====================================================================
+
+PDF Link Format:
+https://staging2.wholesalefencing.com/wp-content/themes/THEME/download-pdf.php?url=ENCODED_PDF_URL&name=FILENAME
+
+Example:
+Original URL: https://wholesalefencing.com/wp-content/uploads/2026/03/Vinyl-Brochure.pdf
+Proxy URL: https://staging2.wholesalefencing.com/.../download-pdf.php?url=https%3A%2F%2F...&name=Brochure
+
+The proxy:
+1. Fetches PDF from ANY URL (main site, staging, external)
+2. Sends Content-Disposition: attachment header
+3. Forces browser to download instead of open
+
+====================================================================
+TESTING:
+====================================================================
+
+1. Upload all 3 files to theme directory
+2. Clear cache (LiteSpeed + browser)
+3. Go to subcategory page
+4. Open Downloads accordion
+5. Click any PDF link
+6. ✅ Should download (not open in browser)
+
+====================================================================
+TROUBLESHOOTING:
+====================================================================
+
+If download doesn't work:
+
+1. Check download-pdf.php is uploaded
+   Location: /wp-content/themes/YOUR-THEME-NAME/download-pdf.php
+
+2. Test proxy directly:
+   https://staging2.wholesalefencing.com/wp-content/themes/THEME/download-pdf.php?url=https://wholesalefencing.com/wp-content/uploads/2026/03/Vinyl-Brochure.pdf&name=Test
+
+3. Check PHP file_get_contents is allowed
+   (Some hosts block external file access)
+
+4. Check browser console for errors
+   (F12 → Console tab)
+
+5. Try different PDF URL to test
+
+====================================================================
+BENEFITS:
+====================================================================
+
+✅ Works with ANY PDF URL (cross-domain, external, etc.)
+✅ Clean server-side solution
+✅ No browser compatibility issues
+✅ Forces download with proper filename
+✅ Same behavior on staging and main site
+✅ No .htaccess needed in uploads folder
+
+====================================================================

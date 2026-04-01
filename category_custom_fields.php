@@ -25,6 +25,17 @@ if (!function_exists('wf_add_category_custom_fields')) {
             <textarea name="category_specifications" id="category_specifications" rows="5"></textarea>
             <p class="description">Enter specifications for this category. You can use HTML for formatting.</p>
         </div>
+
+        <div class="form-field">
+            <label for="category_pdf_downloads">PDF Downloads</label>
+            <textarea name="category_pdf_downloads" id="category_pdf_downloads" rows="6"></textarea>
+            <p class="description">Enter PDF download links, one per line. Format: <strong>Title|URL</strong><br>
+            Example:<br>
+            Brochure|https://example.com/wp-content/uploads/brochure.pdf<br>
+            Install Instructions|https://example.com/wp-content/uploads/install.pdf<br>
+            Warranty|https://example.com/wp-content/uploads/warranty.pdf<br>
+            Specs|https://example.com/wp-content/uploads/specs.pdf</p>
+        </div>
         <?php
     }
 }
@@ -66,6 +77,21 @@ if (!function_exists('wf_edit_category_custom_fields')) {
                 <p class="description">Enter specifications for this category. You can use HTML for formatting.</p>
             </td>
         </tr>
+
+        <tr class="form-field">
+            <th scope="row">
+                <label for="category_pdf_downloads">PDF Downloads</label>
+            </th>
+            <td>
+                <textarea name="category_pdf_downloads" id="category_pdf_downloads" rows="6" style="width: 100%;"><?php echo esc_textarea(get_term_meta($term_id, 'category_pdf_downloads', true)); ?></textarea>
+                <p class="description">Enter PDF download links, one per line. Format: <strong>Title|URL</strong><br>
+                Example:<br>
+                Brochure|https://example.com/wp-content/uploads/brochure.pdf<br>
+                Install Instructions|https://example.com/wp-content/uploads/install.pdf<br>
+                Warranty|https://example.com/wp-content/uploads/warranty.pdf<br>
+                Specs|https://example.com/wp-content/uploads/specs.pdf</p>
+            </td>
+        </tr>
         <?php
     }
 }
@@ -83,6 +109,9 @@ if (!function_exists('wf_save_category_custom_fields_create')) {
         if (isset($_POST['category_specifications'])) {
             update_term_meta($term_id, 'category_specifications', wp_kses_post($_POST['category_specifications']));
         }
+        if (isset($_POST['category_pdf_downloads'])) {
+            update_term_meta($term_id, 'category_pdf_downloads', sanitize_textarea_field($_POST['category_pdf_downloads']));
+        }
     }
 }
 
@@ -98,6 +127,9 @@ if (!function_exists('wf_save_category_custom_fields_edit')) {
         }
         if (isset($_POST['category_specifications'])) {
             update_term_meta($term_id, 'category_specifications', wp_kses_post($_POST['category_specifications']));
+        }
+        if (isset($_POST['category_pdf_downloads'])) {
+            update_term_meta($term_id, 'category_pdf_downloads', sanitize_textarea_field($_POST['category_pdf_downloads']));
         }
     }
 }

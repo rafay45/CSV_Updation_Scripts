@@ -1,0 +1,211 @@
+====================================================================
+PDF DOWNLOAD FIX - INSTALLATION INSTRUCTIONS (UPDATED)
+====================================================================
+
+PROBLEM:
+- PDFs were opening in browser instead of downloading
+- Long URLs with query parameters showing in bottom-left corner
+
+SOLUTION:
+Simple approach using .htaccess to force Content-Disposition headers
+on all PDFs in the uploads directory. URLs remain clean and simple.
+
+====================================================================
+INSTALLATION STEPS:
+====================================================================
+
+1. UPLOAD FILES TO YOUR THEME DIRECTORY
+   ----------------------------------------
+   Upload these files to your active theme directory:
+
+   - subcategory_complete_layout.php (updated)
+   - category_custom_fields.php (if not already there)
+
+   Theme directory path is usually:
+   /wp-content/themes/YOUR-THEME-NAME/
+
+2. ADD .htaccess FILE TO UPLOADS DIRECTORY
+   ----------------------------------------
+   VERY IMPORTANT: This is what makes PDFs download!
+
+   a) Rename ".htaccess_for_uploads" to ".htaccess"
+
+   b) Upload it to: /wp-content/uploads/
+
+   c) Make sure it has these contents:
+
+   <FilesMatch "\.pdf$">
+       Header set Content-Disposition "attachment"
+       Header set X-Content-Type-Options "nosniff"
+   </FilesMatch>
+
+   IMPORTANT NOTES:
+   - File name must be exactly: .htaccess (with the dot at start)
+   - Place it in /wp-content/uploads/ folder (NOT in theme folder)
+   - If an .htaccess already exists there, ADD these lines to it
+   - Make sure your server has mod_headers enabled
+
+3. VERIFY FILE LOCATIONS
+   ----------------------------------------
+   Make sure these files exist:
+
+   /wp-content/themes/YOUR-THEME-NAME/subcategory_complete_layout.php
+   /wp-content/themes/YOUR-THEME-NAME/category_custom_fields.php
+   /wp-content/uploads/.htaccess  (NEW FILE - VERY IMPORTANT!)
+
+4. UPDATE functions.php (if not already done)
+   ----------------------------------------
+   Add these lines to your theme's functions.php:
+
+   // Category Custom Fields
+   require_once get_stylesheet_directory() . '/category_custom_fields.php';
+
+   // Subcategory Layout with Accordions
+   require_once get_stylesheet_directory() . '/subcategory_complete_layout.php';
+
+5. CLEAR CACHE
+   ----------------------------------------
+   - Clear WordPress cache (if using caching plugin)
+   - Clear browser cache
+   - Test on incognito/private window
+
+====================================================================
+HOW IT WORKS:
+====================================================================
+
+BEFORE:
+- PDF link: https://wholesalefencing.com/wp-content/uploads/2026/03/Vinyl-Brochure.pdf?_gl=...
+- URL shown: Same long URL with parameters
+- Result: Opens in browser
+
+AFTER:
+- PDF link: https://wholesalefencing.com/wp-content/uploads/2026/03/Vinyl-Brochure.pdf
+- URL shown: Clean simple URL (query parameters stripped)
+- Result: Forces download due to .htaccess headers
+
+The .htaccess file tells the server:
+"For ALL PDF files in uploads directory, send Content-Disposition: attachment header"
+This forces browser to download instead of opening inline.
+
+====================================================================
+TESTING:
+====================================================================
+
+1. Go to WooCommerce > Products > Categories
+2. Edit any subcategory
+3. Add PDF downloads in format:
+   Brochure|https://wholesalefencing.com/wp-content/uploads/2026/03/Vinyl-Brochure.pdf
+   Warranty|https://wholesalefencing.com/wp-content/uploads/warranty.pdf
+
+4. Visit the subcategory page on frontend
+5. Open "Downloads" accordion
+6. Hover over any PDF link
+   - Should see CLEAN URL in bottom-left (no proxy, just PDF path)
+7. Click on any PDF link
+   - PDF should DOWNLOAD instead of opening in browser
+
+====================================================================
+BENEFITS:
+====================================================================
+
+✓ Clean, simple URLs (no proxy, no long query strings)
+✓ PDFs download directly (no browser opening)
+✓ Proper filename shown in downloads
+✓ Server-side solution (most reliable)
+✓ Works for ALL PDFs in uploads directory automatically
+✓ No JavaScript needed
+✓ Same behavior as main site
+
+====================================================================
+TROUBLESHOOTING:
+====================================================================
+
+If PDFs still open in browser:
+
+1. CHECK .htaccess FILE
+   - Make sure it exists in /wp-content/uploads/
+   - File name must be exactly: .htaccess (with dot)
+   - Check file permissions (644)
+
+2. CHECK SERVER CONFIGURATION
+   - Verify mod_headers is enabled
+   - Ask hosting support to enable if disabled
+   - Run: apache2ctl -M | grep headers (on Linux)
+
+3. TEST .htaccess IS WORKING
+   - Add this line to top of .htaccess:
+     # Test line - delete after testing
+   - Visit any PDF URL directly
+   - View page source or network headers
+   - Look for "Content-Disposition: attachment"
+
+4. ALTERNATIVE .htaccess (if above doesn't work)
+   Replace .htaccess contents with:
+
+   <IfModule mod_rewrite.c>
+       RewriteEngine On
+       RewriteCond %{REQUEST_URI} \.pdf$ [NC]
+       RewriteRule .* - [E=force_download:1]
+       Header set Content-Disposition "attachment" env=force_download
+   </IfModule>
+
+5. BROWSER SETTINGS
+   - Some browsers may have "Always open PDFs" setting
+   - Check browser settings under Downloads
+   - Test in different browser (Chrome, Firefox, Edge)
+
+6. CACHING ISSUES
+   - Clear all caches (WordPress, CDN, browser)
+   - Test in incognito/private mode
+   - Disable caching plugins temporarily
+
+====================================================================
+WHY THIS IS BETTER THAN PROXY:
+====================================================================
+
+❌ Proxy approach:
+   - Shows ugly proxy URL in status bar
+   - More complex to maintain
+   - Extra PHP processing
+   - Security concerns
+
+✅ .htaccess approach:
+   - Clean PDF URLs shown
+   - Simple server configuration
+   - No extra processing
+   - Works automatically for all PDFs
+   - Same as main site behavior
+
+====================================================================
+IMPORTANT NOTES:
+====================================================================
+
+1. The .htaccess file affects ALL PDFs in /wp-content/uploads/
+   - This means ALL PDFs will download (not just category PDFs)
+   - This is usually desired behavior
+   - If you need some PDFs to open inline, you'll need custom rules
+
+2. Query parameters (?_gl=...) are automatically stripped
+   - Browser shows clean URL
+   - Download still works correctly
+
+3. If your server doesn't support .htaccess:
+   - Ask hosting support about alternative methods
+   - May need to configure via server control panel
+   - Nginx servers use different configuration (nginx.conf)
+
+====================================================================
+SUPPORT:
+====================================================================
+
+If you encounter any issues:
+1. Check if .htaccess exists in /wp-content/uploads/
+2. Check if mod_headers is enabled on server
+3. Check WordPress error logs
+4. Check browser console for errors
+5. Test direct PDF URL to see headers
+6. Clear all caches
+7. Test in incognito/private mode
+8. Contact hosting support if .htaccess not working
+
+====================================================================

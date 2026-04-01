@@ -1,0 +1,19 @@
+# ========================================
+# ADD THESE LINES TO ROOT .htaccess FILE
+# Location: Root folder (same level as wp-content)
+# Add AFTER LiteSpeed Cache section, BEFORE WordPress section
+# ========================================
+
+# BEGIN PDF FORCE DOWNLOAD
+<IfModule mod_headers.c>
+    <FilesMatch "\.pdf$">
+        Header set Content-Disposition "attachment"
+        Header set X-Content-Type-Options "nosniff"
+    </FilesMatch>
+</IfModule>
+# END PDF FORCE DOWNLOAD
+
+# ========================================
+# COPY lines 8-13 (BEGIN PDF to END PDF)
+# Paste in root .htaccess after line 26 (after # END LSCACHE)
+# ========================================

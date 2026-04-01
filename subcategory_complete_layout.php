@@ -131,10 +131,28 @@ function wsf_show_accordions_before_products() {
     $video_ids       = get_term_meta($cat_id, 'category_video_ids', true);
     $review_link     = get_term_meta($cat_id, 'category_review_link', true);
     $specifications  = get_term_meta($cat_id, 'category_specifications', true);
+    $pdf_downloads   = get_term_meta($cat_id, 'category_pdf_downloads', true);
 
     $videos = array();
     if (!empty($video_ids)) {
         $videos = array_filter(array_map('trim', explode(',', $video_ids)));
+    }
+
+    // Parse PDF downloads (format: Title|URL, one per line)
+    $pdfs = array();
+    if (!empty($pdf_downloads)) {
+        $lines = explode("\n", $pdf_downloads);
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line)) continue;
+            $parts = explode('|', $line, 2);
+            if (count($parts) == 2) {
+                $pdfs[] = array(
+                    'title' => trim($parts[0]),
+                    'url' => trim($parts[1])
+                );
+            }
+        }
     }
 
     // DEBUG: Log accordion data
@@ -262,7 +280,23 @@ function wsf_show_accordions_before_products() {
                     </span>
                 </div>
                 <div class="wsf-acc-content" id="wsf-acc-downloads" style="display: none; padding: 20px; background: #f9f9f9; border-top: 1px solid #e0e0e0;">
-                    <p style="color: #888;">Downloads section will be added here.</p>
+                    <?php if (!empty($pdfs)): ?>
+                        <div style="display: flex; flex-direction: column; gap: 15px;">
+                            <?php foreach ($pdfs as $pdf):
+                                // Create download proxy URL
+                                $proxy_url = get_stylesheet_directory_uri() . '/download-pdf.php?url=' . urlencode($pdf['url']) . '&name=' . urlencode($pdf['title']);
+                            ?>
+                                <div style="display: flex; align-items: center;">
+                                    <a href="<?php echo esc_url($proxy_url); ?>" class="wsf-pdf-link" style="display: inline-flex; align-items: center; text-decoration: none; color: #327A1F; font-size: 16px; font-weight: 700; transition: color 0.2s ease;">
+                                        <i class="fa-solid fa-file-arrow-down" style="font-size: 25px; color: #327a1f; margin-right: 10px;"></i>
+                                        <span><?php echo esc_html($pdf['title']); ?></span>
+                                    </a>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <p style="color: #888;">No downloads available at this time.</p>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -285,6 +319,7 @@ function wsf_show_accordions_before_products() {
     <style>
     .wsf-accordions .wsf-acc-header:hover { background: #ebebeb !important; }
     .wsf-accordions .wsf-acc-header:hover .wsf-acc-icon { color: #327A1F !important; }
+    .wsf-pdf-link:hover { color: #000 !important; }
     </style>
     <?php
 
@@ -588,7 +623,7 @@ function wsf_show_accordions_before_products() {
             attachVideoHandlers();
         }
 
-        // Attach click handlers to video thumbnails
+        // Attach click handlers to video thumbnails and PDF downloads
         function attachVideoHandlers() {
             console.log('WSF: Attaching video click handlers...');
             var videoContainers = document.querySelectorAll('.wsf-video-container');
@@ -600,6 +635,9 @@ function wsf_show_accordions_before_products() {
                     window.wsfLoadVideo(container);
                 });
             });
+
+            // PDF downloads handled by download-pdf.php proxy
+            // No JavaScript needed - server forces download with Content-Disposition header
 
             // Make subcategory cards toggleable
             makeSubcategoryCardsToggleable();
@@ -689,6 +727,7 @@ function wsf_show_accordions_before_products() {
             cardsContainer.style.maxHeight = '0';
             cardsContainer.style.opacity = '0';
             cardsContainer.style.display = 'grid'; // Keep grid display
+            cardsContainer.style.pointerEvents = 'none'; // Disable clicks when hidden
 
             // Track state
             var isOpen = false;
@@ -706,6 +745,7 @@ function wsf_show_accordions_before_products() {
                     setTimeout(function() {
                         cardsContainer.style.maxHeight = '3000px';
                         cardsContainer.style.opacity = '1';
+                        cardsContainer.style.pointerEvents = 'auto'; // Enable clicks when visible
                     }, 10);
                     icon.style.transform = 'rotate(180deg)';
                     if (accordionSection) {
@@ -717,6 +757,7 @@ function wsf_show_accordions_before_products() {
                     // Hide cards
                     cardsContainer.style.maxHeight = '0';
                     cardsContainer.style.opacity = '0';
+                    cardsContainer.style.pointerEvents = 'none'; // Disable clicks when hidden
                     icon.style.transform = 'rotate(0deg)';
                     if (accordionSection) {
                         accordionSection.style.marginTop = '-70px';

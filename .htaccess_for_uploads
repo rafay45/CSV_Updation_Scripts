@@ -1,0 +1,16 @@
+# Force PDF downloads instead of opening in browser
+# Place this file in: /wp-content/uploads/
+# Rename to: .htaccess
+
+<FilesMatch "\.pdf$">
+    Header set Content-Disposition "attachment"
+    Header set X-Content-Type-Options "nosniff"
+</FilesMatch>
+
+# Alternative method if above doesn't work
+# <IfModule mod_rewrite.c>
+#     RewriteEngine On
+#     RewriteCond %{REQUEST_URI} \.pdf$ [NC]
+#     RewriteRule .* - [E=force_download:1]
+#     Header set Content-Disposition "attachment" env=force_download
+# </IfModule>
