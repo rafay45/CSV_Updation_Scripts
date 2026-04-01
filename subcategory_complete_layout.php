@@ -57,8 +57,31 @@ function wsf_show_accordions_before_products() {
             return;
         }
 
+        // IMPORTANT: Get the FIRST-LEVEL subcategory (not deeper levels)
+        // If user navigates from Privacy -> Gate Hardware, we want Privacy's data, not Gate Hardware's
         $cat_id = $current_cat->term_id;
-        error_log('WSF: This is a subcategory (parent: ' . $current_cat->parent . ') - rendering accordion JavaScript');
+        $parent_id = $current_cat->parent;
+
+        // Traverse up to find the first-level subcategory (direct child of main category)
+        while ($parent_id != 0) {
+            $parent_cat = get_term($parent_id, 'product_cat');
+            if (!$parent_cat || is_wp_error($parent_cat)) {
+                break;
+            }
+
+            // If parent's parent is 0, then current cat_id is the first-level subcategory
+            if ($parent_cat->parent == 0) {
+                // cat_id is already the first-level subcategory
+                error_log('WSF: First-level subcategory: ' . $current_cat->name . ' (ID: ' . $cat_id . ')');
+                break;
+            }
+
+            // Move up one level
+            $cat_id = $parent_id;
+            $parent_id = $parent_cat->parent;
+        }
+
+        error_log('WSF: Using category data from: ID ' . $cat_id . ' (parent: ' . $parent_id . ')');
     }
 
     // For PRODUCT pages: Get category from product
@@ -74,13 +97,37 @@ function wsf_show_accordions_before_products() {
         // Use the first category
         $current_cat = $product_cats[0];
         $cat_id = $current_cat->term_id;
-        error_log('WSF: Product page - using category: ' . $current_cat->name . ' (ID: ' . $cat_id . ')');
+        $parent_id = $current_cat->parent;
+
+        error_log('WSF: Product page - category: ' . $current_cat->name . ' (ID: ' . $cat_id . ', parent: ' . $parent_id . ')');
+
+        // Traverse up to find the first-level subcategory (same as category pages)
+        while ($parent_id != 0) {
+            $parent_cat = get_term($parent_id, 'product_cat');
+            if (!$parent_cat || is_wp_error($parent_cat)) {
+                break;
+            }
+
+            // If parent's parent is 0, then cat_id is the first-level subcategory
+            if ($parent_cat->parent == 0) {
+                error_log('WSF: Product page - First-level subcategory: ID ' . $cat_id);
+                break;
+            }
+
+            // Move up one level
+            $cat_id = $parent_id;
+            $parent_id = $parent_cat->parent;
+        }
+
+        error_log('WSF: Product page - Using category data from: ID ' . $cat_id);
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Get accordion data
+    // Get accordion data from the FIRST-LEVEL subcategory (not current category)
     // ═══════════════════════════════════════════════════════════════════════
-    $intro_text      = $current_cat->description;
+    // Get the category object for the first-level subcategory to fetch its description
+    $first_level_cat = get_term($cat_id, 'product_cat');
+    $intro_text      = $first_level_cat ? $first_level_cat->description : '';
     $video_ids       = get_term_meta($cat_id, 'category_video_ids', true);
     $review_link     = get_term_meta($cat_id, 'category_review_link', true);
     $specifications  = get_term_meta($cat_id, 'category_specifications', true);
@@ -100,7 +147,7 @@ function wsf_show_accordions_before_products() {
     // Create accordion HTML
     ob_start();
     ?>
-    <div class="wsf-category-accordion-section" style="width: 100%; max-width: 1200px; margin: 40px auto; padding: 20px; clear: both;">
+    <div class="wsf-category-accordion-section" style="width: 100%; max-width: 1200px; margin-top: -70px; padding: 20px; clear: both;">
 
         <div class="wsf-accordions" style="margin-bottom: 30px;">
 
@@ -108,7 +155,11 @@ function wsf_show_accordions_before_products() {
             <div class="wsf-acc-item" style="border: 1px solid #e0e0e0; margin-bottom: 10px; border-radius: 6px; overflow: hidden; background: #fff;">
                 <div class="wsf-acc-header" style="background: #f5f5f5; padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 700; color: #333;" onclick="wsfToggleAcc('overview')">
                     <span>Overview</span>
-                    <span class="wsf-acc-icon" style="font-size: 24px; font-weight: bold; color: #666;">∨</span>
+                    <span class="wsf-acc-icon" style="display: inline-flex; align-items: center; transition: transform 0.3s ease;">
+                        <svg width="30" height="30" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M5 7.5L10 12.5L15 7.5" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
                 </div>
                 <div class="wsf-acc-content" id="wsf-acc-overview" style="display: none; padding: 20px; background: #f9f9f9; border-top: 1px solid #e0e0e0;">
                     <?php if (!empty($intro_text)): ?>
@@ -123,7 +174,11 @@ function wsf_show_accordions_before_products() {
             <div class="wsf-acc-item" style="border: 1px solid #e0e0e0; margin-bottom: 10px; border-radius: 6px; overflow: hidden; background: #fff;">
                 <div class="wsf-acc-header" style="background: #f5f5f5; padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 700; color: #333;" onclick="wsfToggleAcc('specifications')">
                     <span>Specifications</span>
-                    <span class="wsf-acc-icon" style="font-size: 24px; font-weight: bold; color: #666;">∨</span>
+                    <span class="wsf-acc-icon" style="display: inline-flex; align-items: center; transition: transform 0.3s ease;">
+                        <svg width="30" height="30" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M5 7.5L10 12.5L15 7.5" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
                 </div>
                 <div class="wsf-acc-content" id="wsf-acc-specifications" style="display: none; padding: 20px; background: #f9f9f9; border-top: 1px solid #e0e0e0;">
                     <?php if (!empty($specifications)): ?>
@@ -138,7 +193,11 @@ function wsf_show_accordions_before_products() {
             <div class="wsf-acc-item" style="border: 1px solid #e0e0e0; margin-bottom: 10px; border-radius: 6px; overflow: hidden; background: #fff;">
                 <div class="wsf-acc-header" style="background: #f5f5f5; padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 700; color: #333;" onclick="wsfToggleAcc('videos')">
                     <span>Videos</span>
-                    <span class="wsf-acc-icon" style="font-size: 24px; font-weight: bold; color: #666;">∨</span>
+                    <span class="wsf-acc-icon" style="display: inline-flex; align-items: center; transition: transform 0.3s ease;">
+                        <svg width="30" height="30" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M5 7.5L10 12.5L15 7.5" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
                 </div>
                 <div class="wsf-acc-content" id="wsf-acc-videos" style="display: none; padding: 20px; background: #f9f9f9; border-top: 1px solid #e0e0e0;">
                     <?php if (!empty($videos)): ?>
@@ -176,7 +235,11 @@ function wsf_show_accordions_before_products() {
             <div class="wsf-acc-item" style="border: 1px solid #e0e0e0; margin-bottom: 10px; border-radius: 6px; overflow: hidden; background: #fff;">
                 <div class="wsf-acc-header" style="background: #f5f5f5; padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 700; color: #333;" onclick="wsfToggleAcc('reviews')">
                     <span>Reviews</span>
-                    <span class="wsf-acc-icon" style="font-size: 24px; font-weight: bold; color: #666;">∨</span>
+                    <span class="wsf-acc-icon" style="display: inline-flex; align-items: center; transition: transform 0.3s ease;">
+                        <svg width="30" height="30" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M5 7.5L10 12.5L15 7.5" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
                 </div>
                 <div class="wsf-acc-content" id="wsf-acc-reviews" style="display: none; padding: 20px; background: #f9f9f9; border-top: 1px solid #e0e0e0;">
                     <?php if (!empty($review_link)): ?>
@@ -192,7 +255,11 @@ function wsf_show_accordions_before_products() {
             <div class="wsf-acc-item" style="border: 1px solid #e0e0e0; margin-bottom: 10px; border-radius: 6px; overflow: hidden; background: #fff;">
                 <div class="wsf-acc-header" style="background: #f5f5f5; padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 700; color: #333;" onclick="wsfToggleAcc('downloads')">
                     <span>Downloads</span>
-                    <span class="wsf-acc-icon" style="font-size: 24px; font-weight: bold; color: #666;">∨</span>
+                    <span class="wsf-acc-icon" style="display: inline-flex; align-items: center; transition: transform 0.3s ease;">
+                        <svg width="30" height="30" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M5 7.5L10 12.5L15 7.5" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
                 </div>
                 <div class="wsf-acc-content" id="wsf-acc-downloads" style="display: none; padding: 20px; background: #f9f9f9; border-top: 1px solid #e0e0e0;">
                     <p style="color: #888;">Downloads section will be added here.</p>
@@ -208,7 +275,9 @@ function wsf_show_accordions_before_products() {
                 Please Fill Out This Form For A Free Quote. You Can Email Customer Service Directly at:<br>
                 <a href="mailto:orders@wholesalefencing.com" style="color: #327A1F; text-decoration: none; font-weight: 600;">orders@wholesalefencing.com</a>
             </p>
-            <?php echo do_shortcode('[wooaddon_from]'); ?>
+            <div class="contact-quick">
+                <?php echo do_shortcode('[wooaddon_from]'); ?>
+            </div>
         </div>
 
     </div>
@@ -231,27 +300,32 @@ function wsf_show_accordions_before_products() {
 
         var header = content.previousElementSibling;
         var icon = header.querySelector('.wsf-acc-icon');
+        var svg = icon.querySelector('svg path');
         var isOpen = content.style.display === 'block';
 
+        // Close all other accordions
         document.querySelectorAll('.wsf-accordions .wsf-acc-content').forEach(function(item) {
             if (item !== content) item.style.display = 'none';
         });
 
+        // Reset all other icons
         document.querySelectorAll('.wsf-accordions .wsf-acc-icon').forEach(function(ic) {
             if (ic !== icon) {
-                ic.textContent = '∨';
-                ic.style.color = '#666';
+                ic.style.transform = 'rotate(0deg)';
+                var otherSvg = ic.querySelector('svg path');
+                if (otherSvg) otherSvg.setAttribute('stroke', '#666');
             }
         });
 
+        // Toggle current accordion
         if (isOpen) {
             content.style.display = 'none';
-            icon.textContent = '∨';
-            icon.style.color = '#666';
+            icon.style.transform = 'rotate(0deg)';
+            if (svg) svg.setAttribute('stroke', '#666');
         } else {
             content.style.display = 'block';
-            icon.textContent = '∧';
-            icon.style.color = '#327A1F';
+            icon.style.transform = 'rotate(180deg)';
+            if (svg) svg.setAttribute('stroke', '#327A1F');
         }
     };
 
@@ -329,6 +403,19 @@ function wsf_show_accordions_before_products() {
                 }
             }
 
+            // Method 5: For PRODUCT pages - check for category products section
+            if (!hasSubcategories) {
+                var relatedProductsHeadings = document.querySelectorAll('h2, h3, h4');
+                for (var i = 0; i < relatedProductsHeadings.length; i++) {
+                    var text = relatedProductsHeadings[i].textContent.toLowerCase();
+                    if (text.includes('related product') || text.includes('you may also like')) {
+                        hasSubcategories = true;
+                        console.log('WSF: ✓ Found related products section on product page');
+                        break;
+                    }
+                }
+            }
+
             if (!hasSubcategories) {
                 console.log('WSF: ✗ No subcategories found - this is a product listing page');
                 return;
@@ -347,6 +434,77 @@ function wsf_show_accordions_before_products() {
             }
 
             console.log('WSF: #wsf-product-categories not found, trying other methods...');
+
+            // SPECIAL: For PRODUCT pages - insert after FIRST .wsf-term-group (subcategory section)
+            var isProductPage = document.body.classList.contains('single-product');
+            if (isProductPage) {
+                console.log('WSF: This is a PRODUCT page - looking for .wsf-term-group section');
+
+                // Method 1: Look for .wsf-term-group (subcategory section on product page)
+                var termGroups = document.querySelectorAll('.wsf-term-group');
+                if (termGroups.length > 0) {
+                    var firstTermGroup = termGroups[0]; // Use the FIRST one only
+                    console.log('WSF: ✓ Found .wsf-term-group sections (total: ' + termGroups.length + '), using the FIRST one');
+                    console.log('WSF: Inserting accordions AFTER FIRST .wsf-term-group');
+                    firstTermGroup.insertAdjacentHTML('afterend', <?php echo json_encode($accordion_html); ?>);
+                    console.log('WSF: ✅ Accordions inserted on product page!');
+                    attachVideoHandlers();
+                    return;
+                }
+
+                // Method 2: Look for category products grid (subcategories on product page)
+                var categoryGrid = document.querySelector('.dpc-card-grid');
+                if (categoryGrid && categoryGrid.querySelector('.dpc-cat-card')) {
+                    console.log('WSF: ✓ Found category grid on product page');
+                    // Find the parent section/container
+                    var gridParent = categoryGrid.parentElement;
+                    while (gridParent && !gridParent.classList.contains('section')) {
+                        gridParent = gridParent.parentElement;
+                    }
+                    if (gridParent) {
+                        console.log('WSF: Inserting accordions AFTER category grid section');
+                        gridParent.insertAdjacentHTML('afterend', <?php echo json_encode($accordion_html); ?>);
+                        console.log('WSF: ✅ Accordions inserted on product page!');
+                        attachVideoHandlers();
+                        return;
+                    }
+                }
+
+                // Method 3: Look for "Related Products" or "You may also like" section
+                var relatedSection = null;
+                var allSections = document.querySelectorAll('.related.products, section');
+
+                for (var i = 0; i < allSections.length; i++) {
+                    var heading = allSections[i].querySelector('h2, h3');
+                    if (heading) {
+                        var headingText = heading.textContent.toLowerCase();
+                        if (headingText.includes('related product') || headingText.includes('you may also like')) {
+                            relatedSection = allSections[i];
+                            console.log('WSF: ✓ Found related products section: "' + heading.textContent.trim() + '"');
+                            break;
+                        }
+                    }
+                }
+
+                if (relatedSection) {
+                    console.log('WSF: Inserting accordions AFTER related products section');
+                    relatedSection.insertAdjacentHTML('afterend', <?php echo json_encode($accordion_html); ?>);
+                    console.log('WSF: ✅ Accordions inserted on product page!');
+                    attachVideoHandlers();
+                    return;
+                }
+
+                // Method 4: Look for any products grid with .row.row-small
+                var productRows = document.querySelectorAll('.row.row-small');
+                if (productRows.length > 0) {
+                    var lastProductRow = productRows[productRows.length - 1];
+                    console.log('WSF: Found product row grid, inserting after it');
+                    lastProductRow.insertAdjacentHTML('afterend', <?php echo json_encode($accordion_html); ?>);
+                    console.log('WSF: ✅ Accordions inserted on product page!');
+                    attachVideoHandlers();
+                    return;
+                }
+            }
 
             // Find ALL .row elements to locate "Vinyl Sub Categories" section
             var allRows = document.querySelectorAll('.row');
@@ -442,7 +600,143 @@ function wsf_show_accordions_before_products() {
                     window.wsfLoadVideo(container);
                 });
             });
+
+            // Make subcategory cards toggleable
+            makeSubcategoryCardsToggleable();
         }
+
+        // Make subcategory cards (in #wsf-sub-categories) toggleable
+        function makeSubcategoryCardsToggleable() {
+            // Try to find subcategory section - #wsf-sub-categories (category pages)
+            var subCatSection = document.getElementById('wsf-sub-categories');
+
+            if (!subCatSection) {
+                console.log('WSF: #wsf-sub-categories section not found');
+                // For product pages, check for .wsf-term-group
+                var termGroups = document.querySelectorAll('.wsf-term-group');
+                if (termGroups.length > 0) {
+                    console.log('WSF: Found ' + termGroups.length + ' .wsf-term-group sections (product page)');
+                    // Make FIRST one accordion, rest just centered
+                    subCatSection = termGroups[0];
+                    console.log('WSF: Using FIRST .wsf-term-group for accordion');
+                    // Center the rest (skip first)
+                    for (var i = 1; i < termGroups.length; i++) {
+                        var h = termGroups[i].querySelector('h2, h3, h1');
+                        if (h && !h.hasAttribute('data-wsf-centered')) {
+                            h.style.textAlign = 'center';
+                            h.setAttribute('data-wsf-centered', 'true');
+                            console.log('WSF: ✓ Centered heading ' + i + ': ' + h.textContent.trim());
+                        }
+                    }
+                } else {
+                    console.log('WSF: No subcategory sections found');
+                    return;
+                }
+            } else {
+                console.log('WSF: Found #wsf-sub-categories section (category page)');
+            }
+
+            var heading = subCatSection.querySelector('h2, h3, h1');
+            if (!heading) {
+                console.log('WSF: No heading found in subcategory section');
+                return;
+            }
+
+            // Check if already initialized
+            if (heading.hasAttribute('data-wsf-initialized')) {
+                console.log('WSF: Subcategory cards toggle already initialized');
+                return;
+            }
+
+            // Find the subcategory cards grid/container (usually next sibling)
+            var cardsContainer = null;
+            var nextEl = subCatSection.nextElementSibling;
+
+            // Try to find cards container - could be .dpc-card-grid, .category-grid, or any grid
+            if (nextEl && (nextEl.classList.contains('dpc-card-grid') || nextEl.classList.contains('category-grid'))) {
+                cardsContainer = nextEl;
+            } else {
+                // Search within the section itself
+                cardsContainer = subCatSection.querySelector('.dpc-card-grid, .category-grid, [class*="grid"]');
+            }
+
+            if (!cardsContainer) {
+                console.log('WSF: Cards container not found');
+                return;
+            }
+
+            // Save original text
+            var headingText = heading.textContent;
+
+            // Style heading as accordion
+            heading.style.cursor = 'pointer';
+            heading.style.display = 'flex';
+            heading.style.justifyContent = 'center';
+            heading.style.alignItems = 'center';
+            heading.style.padding = '15px 20px';
+            heading.style.background = '#f5f5f5';
+            heading.style.borderRadius = '6px';
+            heading.style.marginBottom = '20px';
+            heading.style.position = 'relative';
+
+            // Add SVG icon
+            var iconHTML = '<span class="wsf-subcat-cards-toggle-icon" style="position: absolute; right: 20px; display: inline-flex; align-items: center; transition: transform 0.3s ease;"><svg width="30" height="30" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 7.5L10 12.5L15 7.5" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+            heading.innerHTML = '<span style="flex: 1; text-align: center;">' + headingText + '</span>' + iconHTML;
+
+            // Add smooth transition to cards
+            cardsContainer.style.transition = 'max-height 0.4s ease, opacity 0.3s ease';
+            cardsContainer.style.overflow = 'hidden';
+            cardsContainer.style.maxHeight = '0';
+            cardsContainer.style.opacity = '0';
+            cardsContainer.style.display = 'grid'; // Keep grid display
+
+            // Track state
+            var isOpen = false;
+
+            // Click handler
+            heading.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                var icon = heading.querySelector('.wsf-subcat-cards-toggle-icon');
+                var accordionSection = document.querySelector('.wsf-category-accordion-section');
+
+                if (!isOpen) {
+                    // Show cards
+                    setTimeout(function() {
+                        cardsContainer.style.maxHeight = '3000px';
+                        cardsContainer.style.opacity = '1';
+                    }, 10);
+                    icon.style.transform = 'rotate(180deg)';
+                    if (accordionSection) {
+                        accordionSection.style.marginTop = '0px';
+                    }
+                    isOpen = true;
+                    console.log('WSF: Subcategory cards shown');
+                } else {
+                    // Hide cards
+                    cardsContainer.style.maxHeight = '0';
+                    cardsContainer.style.opacity = '0';
+                    icon.style.transform = 'rotate(0deg)';
+                    if (accordionSection) {
+                        accordionSection.style.marginTop = '-70px';
+                    }
+                    isOpen = false;
+                    console.log('WSF: Subcategory cards hidden');
+                }
+            });
+
+            // Mark as initialized
+            heading.setAttribute('data-wsf-initialized', 'true');
+
+            console.log('WSF: ✓ Subcategory cards made toggleable');
+        }
+
+
+        // Call this function after page loads
+        setTimeout(function() {
+            makeSubcategoryCardsToggleable();
+        }, 500);
 
         // URL CHANGE DETECTION: Hide/Show accordions when URL changes (AJAX navigation)
         function checkAccordionVisibility() {
