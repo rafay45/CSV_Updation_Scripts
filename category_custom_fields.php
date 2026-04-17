@@ -22,8 +22,18 @@ if (!function_exists('wf_add_category_custom_fields')) {
 
         <div class="form-field">
             <label for="category_specifications">Specifications</label>
-            <textarea name="category_specifications" id="category_specifications" rows="5"></textarea>
-            <p class="description">Enter specifications for this category. You can use HTML for formatting.</p>
+            <textarea name="category_specifications" id="category_specifications" rows="8"></textarea>
+            <p class="description"><strong>Format: One item per line</strong><br>
+            <strong>Text:</strong> Just enter text directly<br>
+            <strong>Image:</strong> IMAGE|Image URL<br>
+            <strong>PDF:</strong> PDF|PDF URL|Link Text<br>
+            <br>
+            <strong>Example:</strong><br>
+            Fence Height: 2' 1/2" and 4'<br>
+            IMAGE|https://example.com/wp-content/uploads/fence-diagram.jpg<br>
+            Panel Width: 6' and 8'<br>
+            PDF|https://example.com/specs.pdf|Download Full Specifications<br>
+            Rail: 2" x 3 1/2" - 1/2 Wall</p>
         </div>
 
         <div class="form-field">
@@ -35,6 +45,24 @@ if (!function_exists('wf_add_category_custom_fields')) {
             Install Instructions|https://example.com/wp-content/uploads/install.pdf<br>
             Warranty|https://example.com/wp-content/uploads/warranty.pdf<br>
             Specs|https://example.com/wp-content/uploads/specs.pdf</p>
+        </div>
+
+        <div class="form-field">
+            <label for="category_profile_type">Profile Type</label>
+            <select name="category_profile_type" id="category_profile_type">
+                <option value="">None (No Profile)</option>
+                <option value="vinyl-privacy-with-lattice-top">Vinyl Privacy With Lattice Top</option>
+                <option value="vinyl-privacy">Vinyl Privacy</option>
+                <option value="vinyl-2-rail">Vinyl 2 Rail</option>
+                <option value="vinyl-3-rail">Vinyl 3 Rail</option>
+                <option value="vinyl-4-rail">Vinyl 4 Rail</option>
+                <option value="vinyl-picket-fence">Vinyl Picket Fence</option>
+                <option value="vinyl-pool-fence">Vinyl Pool Fence</option>
+                <option value="vinyl-scalloped-picket">Vinyl Scalloped Picket</option>
+                <option value="horizontal-aluminum">Horizontal Aluminum</option>
+                <option value="aluminum-with-fill">Aluminum With Fill</option>
+            </select>
+            <p class="description">Select which profile template to display for this category. Leave as "None" to hide profiles.</p>
         </div>
         <?php
     }
@@ -73,8 +101,18 @@ if (!function_exists('wf_edit_category_custom_fields')) {
                 <label for="category_specifications">Specifications</label>
             </th>
             <td>
-                <textarea name="category_specifications" id="category_specifications" rows="5" style="width: 100%;"><?php echo esc_textarea(get_term_meta($term_id, 'category_specifications', true)); ?></textarea>
-                <p class="description">Enter specifications for this category. You can use HTML for formatting.</p>
+                <textarea name="category_specifications" id="category_specifications" rows="8" style="width: 100%;"><?php echo esc_textarea(get_term_meta($term_id, 'category_specifications', true)); ?></textarea>
+                <p class="description"><strong>Format: One item per line</strong><br>
+                <strong>Text:</strong> Just enter text directly<br>
+                <strong>Image:</strong> IMAGE|Image URL<br>
+                <strong>PDF:</strong> PDF|PDF URL|Link Text<br>
+                <br>
+                <strong>Example:</strong><br>
+                Fence Height: 2' 1/2" and 4'<br>
+                IMAGE|https://example.com/wp-content/uploads/fence-diagram.jpg<br>
+                Panel Width: 6' and 8'<br>
+                PDF|https://example.com/specs.pdf|Download Full Specifications<br>
+                Rail: 2" x 3 1/2" - 1/2 Wall</p>
             </td>
         </tr>
 
@@ -90,6 +128,29 @@ if (!function_exists('wf_edit_category_custom_fields')) {
                 Install Instructions|https://example.com/wp-content/uploads/install.pdf<br>
                 Warranty|https://example.com/wp-content/uploads/warranty.pdf<br>
                 Specs|https://example.com/wp-content/uploads/specs.pdf</p>
+            </td>
+        </tr>
+
+        <tr class="form-field">
+            <th scope="row">
+                <label for="category_profile_type">Profile Type</label>
+            </th>
+            <td>
+                <?php $profile_type = get_term_meta($term_id, 'category_profile_type', true); ?>
+                <select name="category_profile_type" id="category_profile_type" style="width: 100%; max-width: 400px;">
+                    <option value="">None (No Profile)</option>
+                    <option value="vinyl-privacy-with-lattice-top" <?php selected($profile_type, 'vinyl-privacy-with-lattice-top'); ?>>Vinyl Privacy With Lattice Top</option>
+                    <option value="vinyl-privacy" <?php selected($profile_type, 'vinyl-privacy'); ?>>Vinyl Privacy</option>
+                    <option value="vinyl-2-rail" <?php selected($profile_type, 'vinyl-2-rail'); ?>>Vinyl 2 Rail</option>
+                    <option value="vinyl-3-rail" <?php selected($profile_type, 'vinyl-3-rail'); ?>>Vinyl 3 Rail</option>
+                    <option value="vinyl-4-rail" <?php selected($profile_type, 'vinyl-4-rail'); ?>>Vinyl 4 Rail</option>
+                    <option value="vinyl-picket-fence" <?php selected($profile_type, 'vinyl-picket-fence'); ?>>Vinyl Picket Fence</option>
+                    <option value="vinyl-pool-fence" <?php selected($profile_type, 'vinyl-pool-fence'); ?>>Vinyl Pool Fence</option>
+                    <option value="vinyl-scalloped-picket" <?php selected($profile_type, 'vinyl-scalloped-picket'); ?>>Vinyl Scalloped Picket</option>
+                    <option value="horizontal-aluminum" <?php selected($profile_type, 'horizontal-aluminum'); ?>>Horizontal Aluminum</option>
+                    <option value="aluminum-with-fill" <?php selected($profile_type, 'aluminum-with-fill'); ?>>Aluminum With Fill</option>
+                </select>
+                <p class="description">Select which profile template to display for this category. Leave as "None" to hide profiles.</p>
             </td>
         </tr>
         <?php
@@ -112,6 +173,9 @@ if (!function_exists('wf_save_category_custom_fields_create')) {
         if (isset($_POST['category_pdf_downloads'])) {
             update_term_meta($term_id, 'category_pdf_downloads', sanitize_textarea_field($_POST['category_pdf_downloads']));
         }
+        if (isset($_POST['category_profile_type'])) {
+            update_term_meta($term_id, 'category_profile_type', sanitize_text_field($_POST['category_profile_type']));
+        }
     }
 }
 
@@ -130,6 +194,9 @@ if (!function_exists('wf_save_category_custom_fields_edit')) {
         }
         if (isset($_POST['category_pdf_downloads'])) {
             update_term_meta($term_id, 'category_pdf_downloads', sanitize_textarea_field($_POST['category_pdf_downloads']));
+        }
+        if (isset($_POST['category_profile_type'])) {
+            update_term_meta($term_id, 'category_profile_type', sanitize_text_field($_POST['category_profile_type']));
         }
     }
 }

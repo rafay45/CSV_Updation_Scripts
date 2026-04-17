@@ -88,9 +88,20 @@ def sync_files(master_file, target_file, output_file):
                         images.append(master_row[img_key])
                 target_row['Images'] = ', '.join([img for img in images if img])
 
-            # Update price from RETAIL1
-            if master_row.get('RETAIL1'):
-                target_row['Regular price'] = master_row['RETAIL1'].replace('$', '').strip()
+            # Update price - check all RETAIL columns (RETAIL1 to RETAIL40)
+            # Use the first non-NA price found
+            retail_price = None
+            for i in range(1, 41):  # RETAIL1 to RETAIL40
+                retail_col = f'RETAIL{i}'
+                if master_row.get(retail_col):
+                    price_val = master_row[retail_col].strip()
+                    # Check if it's not NA or empty
+                    if price_val and price_val.upper() not in ['NA', 'N/A', '']:
+                        retail_price = price_val.replace('$', '').strip()
+                        break  # Use first valid price found
+
+            if retail_price:
+                target_row['Regular price'] = retail_price
 
             # Update stock status
             if master_row.get('IN STOCK'):
@@ -129,9 +140,9 @@ def sync_files(master_file, target_file, output_file):
     print(f"{'='*70}")
 
 if __name__ == "__main__":
-    master_file = r"C:\Users\user\Downloads\Master File - Web Clean - 18-03-26 - Export_Clean New.csv"
-    target_file = r"C:\Users\user\Downloads\FencingsProductData_Updated_ShortDescriptions_v2.csv"
-    output_file = r"C:\Users\user\Downloads\FencingsProductData_Final_Synced.csv"
+    master_file = r"C:\Users\user\Downloads\Master File - Web Clean - 18-03-26 - Export_Clean New (1).csv"
+    target_file = r"C:\Users\user\Downloads\FencingsProductData_Final_Synced.csv"
+    output_file = r"C:\Users\user\Downloads\FencingsProductData_Final_Synced_Updated.csv"
 
     print("Starting sync process...")
     print()

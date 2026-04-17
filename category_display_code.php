@@ -79,6 +79,7 @@ function dpc_styles() {
 
     /* ── Subcategory / Tag card grid ── */
     .dpc-card-grid {
+    padding: 20px;
         display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 20px 20px;
@@ -730,12 +731,10 @@ function dpc_render_category_page() {
         <?php endif; ?>
 
         <?php if ($has_children): ?>
-            <!-- ── Has subcategories: show category cards ── -->
-            <div class="dpc-card-grid" id="dpc-subcategory-cards" style="display: none;">
+            <div class="dpc-card-grid">
                 <?php foreach ($child_cats as $child):
                     $thumb_id  = get_term_meta($child->term_id, 'thumbnail_id', true);
                     $thumb_url = $thumb_id ? wp_get_attachment_url($thumb_id) : '';
-                    $count     = dpc_count_products($child->term_id);
                 ?>
                 <a href="<?php echo esc_url(get_term_link($child)); ?>" class="dpc-cat-card">
                     <div class="dpc-card-icon">
@@ -751,7 +750,6 @@ function dpc_render_category_page() {
             </div>
 
         <?php else: ?>
-            <!-- ── No subcategories: show products directly ── -->
             <?php dpc_render_products($cat_id); ?>
 
         <?php endif; ?>
@@ -1545,5 +1543,113 @@ function dpc_render_products($cat_id) {
             </div>
         </div>
     </div>
+    <?php
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INJECT PRODUCT GRID ON FLATSOME CATEGORY PAGES (WSF_OLD_CATALOG_ENABLED = false)
+// ═══════════════════════════════════════════════════════════════════════════════
+add_action('wp_footer', 'dpc_inject_products_on_subcategory_page', 30);
+function dpc_inject_products_on_subcategory_page() {
+    if (!is_product_category()) return;
+    if (WSF_OLD_CATALOG_ENABLED) return;
+
+    $current_cat = get_queried_object();
+    if (!$current_cat || !isset($current_cat->term_id)) return;
+
+    $cat_id = $current_cat->term_id;
+
+    $child_cats = get_terms(array(
+        'taxonomy'   => 'product_cat',
+        'parent'     => $cat_id,
+        'hide_empty' => true,
+        'fields'     => 'ids',
+    ));
+    $has_children = !empty($child_cats) && !is_wp_error($child_cats);
+
+    if ($has_children) return;
+
+    $check = new WP_Query(array(
+        'post_type'      => 'product',
+        'posts_per_page' => 1,
+        'fields'         => 'ids',
+        'tax_query'      => array(array(
+            'taxonomy'         => 'product_cat',
+            'field'            => 'term_id',
+            'terms'            => $cat_id,
+            'include_children' => true,
+        )),
+    ));
+    if (!$check->have_posts()) {
+        wp_reset_postdata();
+        return;
+    }
+    wp_reset_postdata();
+
+    ob_start();
+    dpc_styles();
+    echo '<div id="dpc-injected-products" style="max-width:1200px; margin:40px auto; padding:0 20px;">';
+    dpc_render_products($cat_id, true);
+    echo '</div>';
+    $products_html = ob_get_clean();
+    ?>
+    <script>
+    (function() {
+        function dpcInjectProducts() {
+            if (document.getElementById('dpc-injected-products')) return;
+
+            var html = <?php echo json_encode($products_html); ?>;
+
+            var allHeadings = document.querySelectorAll('h2, h3, h4, .section-title, .block-title');
+            for (var i = 0; i < allHeadings.length; i++) {
+                var txt = allHeadings[i].textContent.trim().toLowerCase();
+                if (txt === 'product category' || txt === 'component type') {
+                    var lists = document.querySelectorAll(
+                        '.woocommerce .products, ul.products, .products.columns-4, .products.columns-3, .products.columns-2, .products.row'
+                    );
+                    lists.forEach(function(list) {
+                        if (!list || list.closest('#dpc-injected-products')) return;
+                        list.style.display = 'none';
+                    });
+                    return;
+                }
+            }
+
+            var lists = document.querySelectorAll(
+                '.woocommerce .products, ul.products, .products.columns-4, .products.columns-3, .products.columns-2, .products.row, .woocommerce .woocommerce-products__list'
+            );
+            lists.forEach(function(list) {
+                if (!list || list.closest('#dpc-injected-products')) return;
+                list.style.display = 'none';
+            });
+
+            var accordionSection = document.querySelector('.wsf-category-accordion-section');
+            if (accordionSection) {
+                accordionSection.insertAdjacentHTML('afterend', html);
+                return;
+            }
+
+            var formAnchor = document.querySelector('.wsf-contact-form-wrapper, .wsf-contact-form, .wsf-form');
+            if (formAnchor) {
+                formAnchor.insertAdjacentHTML('afterend', html);
+                return;
+            }
+
+            var shopContainer = document.querySelector('.shop-container, .site-content, main, #main, #primary');
+            if (shopContainer) {
+                shopContainer.insertAdjacentHTML('beforeend', html);
+                return;
+            }
+
+            document.body.insertAdjacentHTML('beforeend', html);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', dpcInjectProducts);
+        } else {
+            dpcInjectProducts();
+        }
+    })();
+    </script>
     <?php
 }
